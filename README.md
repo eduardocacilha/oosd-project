@@ -1,3 +1,4 @@
+ HEAD
 # Sistema de Gestão de Festas - Arquitetura MVC
 
 ## Descrição
@@ -173,3 +174,8 @@ Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes
 
 ---
 *Sistema desenvolvido para fins educacionais - Disciplina de Desenvolvimento de Software Orientado a Objetos*
+=======
+# oosd-project
+Sistema de Festas - UFSC - Desenvolvimento de Sistemas Orientado a Objetos 25.2
+Classes: Aluno, Evento, Happy Hour, Festa Open bar, Festa (com venda de bebida), Trote, Feedback, Produto, Copo, Camisa, Bebida.
+>>>>>>> 7b817db3fd467c57976c686791a8df80122fc8f2
