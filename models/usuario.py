@@ -1,43 +1,47 @@
+from __future__ import annotations
 from datetime import date
 from typing import List, Optional
 from .venda import Venda
 from .feedback import Feedback
 from .evento import Evento
-from .ingresso import Ingresso 
 
 class Usuario:
-    def __init__(self, matricula: str, nome: str, email: str): 
+    _registros: List['Usuario'] = []
+    _next_id = 1
+
+    def __init__(self, matricula: str, nome: str, email: str):
+        if not matricula.isdigit():
+            raise ValueError("Matrícula deve conter apenas números")
+        
         self.__matricula = matricula
         self.__nome = nome
         self.__email = email
         self.__historico_compras: List[Venda] = []
-        self.__ingressos_comprados: List[Ingresso] = []
+        self.__ingressos_comprados: List['Ingresso'] = []
+        Usuario._registros.append(self)
 
-    def avaliar_evento(self, evento: Evento, nota: int, comentario: str):
-        fb = Feedback(
-            usuario=self,
-            evento=evento,
-            nota=nota, 
-            comentario=comentario, 
-            data=date.today()
-        )
-        evento.adicionar_feedback(fb)
-        return fb
+    @classmethod
+    def get_by_matricula(cls, matricula: str) -> Optional['Usuario']:
+        for u in cls._registros:
+            if u.matricula == matricula:
+                return u
+        return None
 
-    def ver_historico_compras(self):
-        return list(self.__historico_compras)
+    @classmethod
+    def get_all(cls) -> List['Usuario']:
+        return list(cls._registros)
 
-    def adicionar_compra(self, venda: Venda):
-        self.__historico_compras.append(venda)
+    @classmethod
+    def remove(cls, usuario: 'Usuario'):
+        if usuario in cls._registros:
+            cls._registros.remove(usuario)
 
-    def comprar_ingresso(self, evento, preco: Optional[float] = None):
+    def comprar_ingresso(self, evento: Evento, preco: Optional[float] = None, metodo_pagamento: str = "Não informado") -> 'Ingresso':
+        from .ingresso import Ingresso
         if preco is None:
-            if hasattr(evento, 'preco_entrada'):
-                preco = evento.preco_entrada
-            else:
-                preco = 0.0
+            preco = getattr(evento, 'preco_entrada', 0.0)
 
-        ingresso = Ingresso(evento, self, date.today(), preco) 
+        ingresso = Ingresso(evento, self, date.today(), preco, metodo_pagamento)
         self.__ingressos_comprados.append(ingresso)
         
         if hasattr(evento, 'registrar_compra_ingresso'):
@@ -45,79 +49,48 @@ class Usuario:
         
         return ingresso
         
-    def listar_ingressos_a_venda(self, lista_ingressos_geral: List[Ingresso]):
-        return [ing for ing in lista_ingressos_geral if ing.revendedor == self]
-
-    def colocar_ingresso_a_venda(self, ingresso: Ingresso, novo_preco: float):
+    def colocar_ingresso_a_venda(self, ingresso: 'Ingresso', novo_preco: float):
         if ingresso not in self.__ingressos_comprados:
             raise ValueError("Este ingresso não pertence a este usuário.")
-            
+        
         ingresso.preco = novo_preco
-        ingresso.revendedor = self 
-        return True
+        ingresso.revendedor = self
 
-    def remover_ingresso_da_venda(self, ingresso: Ingresso):
+    def remover_ingresso_da_venda(self, ingresso: 'Ingresso'):
         if ingresso.revendedor != self:
             raise ValueError("Este ingresso não está sendo revendido por você.")
         
         ingresso.revendedor = None
-        return True
 
-    def comprar_ingresso_revenda(self, ingresso: Ingresso):
-        revendedor = ingresso.revendedor
-        if revendedor is None:
-            raise ValueError("Este ingresso não está em revenda.")
-        
-        if self == revendedor:
-            raise ValueError("Você não pode comprar um ingresso de si mesmo.")
-            
-        venda_simulada = Venda(
-            id_venda=0,
-            metodo_pagamento="revenda", 
-            data_hora=date.today()
-        )
-        self.adicionar_compra(venda_simulada)
-        
-        if ingresso in revendedor.ingressos_comprados:
-            revendedor.ingressos_comprados.remove(ingresso)
+    def adicionar_venda_historico(self, venda: Venda):
+        self.__historico_compras.append(venda)
 
-        ingresso.revendedor = None
-        ingresso.comprador = self 
-        
-        self.__ingressos_comprados.append(ingresso)
-        
-        return True
-
-    def listar_ingressos(self):
+    def listar_ingressos(self) -> List['Ingresso']:
         return list(self.__ingressos_comprados)
-
-    def obter_ingressos_por_evento(self, evento):
-        return [ing for ing in self.__ingressos_comprados if ing.evento == evento]
-
     @property
-    def matricula(self):
+    def matricula(self) -> str:
         return self.__matricula
 
     @property
-    def nome(self):
+    def nome(self) -> str:
         return self.__nome
 
     @nome.setter
-    def nome(self, value):
-        self._nome = value
+    def nome(self, value: str):
+        self.__nome = value
 
     @property
-    def email(self):
+    def email(self) -> str:
         return self.__email
 
     @email.setter
-    def email(self, value):
-        self._email = value
+    def email(self, value: str):
+        self.__email = value
         
     @property
-    def historico_compras(self):
+    def historico_compras(self) -> List[Venda]:
         return self.__historico_compras
 
     @property 
-    def ingressos_comprados(self):
+    def ingressos_comprados(self) -> List['Ingresso']:
         return self.__ingressos_comprados

@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 
-
 class Produto(ABC):
     def __init__(self, id_produto: int, nome: str, preco: float, estoque: int):
         self.__id_produto = id_produto
@@ -29,6 +28,10 @@ class Produto(ABC):
     @property
     def nome(self):
         return self.__nome
+    
+    @nome.setter
+    def nome(self, value):
+        self.__nome = value
 
     @property
     def preco(self):

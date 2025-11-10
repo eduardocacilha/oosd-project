@@ -1,8 +1,7 @@
 try:
     from .produto import Produto
 except ImportError:
-    from produto import Produto  # type: ignore
-
+    from models.produto import Produto
 
 class ItemVenda:
     def __init__(self, produto: Produto, quantidade: int, preco_unitario_momento: float):

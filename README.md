@@ -21,7 +21,7 @@ Sistema desenvolvido em Python para gerenciamento de festas e eventos, implement
 - Controle de capacidade
 
 ### Gerenciamento de Ingressos
-- Compra de ingressos para eventos
+- Compra de ingressos para eventos, registrando o método de pagamento utilizado (Dinheiro, PIX, Débito, Crédito)
 - Sistema de revenda entre usuários
 - Controle de preços personalizados
 - Transferência de propriedade de ingressos
@@ -30,6 +30,20 @@ Sistema desenvolvido em Python para gerenciamento de festas e eventos, implement
 - Avaliação de eventos (notas de 1 a 5)
 - Comentários sobre eventos
 - Histórico de avaliações por usuário
+
+### Sistema de Relatórios
+- **Eventos por Preço**: Listagem dos eventos mais caros e mais baratos
+- **Eventos por Avaliação**: Ranking dos eventos mais bem avaliados
+- **Eventos por Vendas**: Ranking dos eventos com maior número de ingressos vendidos
+- **Ranking Geral de Eventos**: Classificação geral considerando vendas e avaliações
+- **Produtos por Preço**: Listagem dos produtos mais caros e mais baratos
+- **Produtos Mais Vendidos**: Ranking dos produtos com maior quantidade vendida
+- **Faturamento por Produto**: Relatório de faturamento individual dos produtos
+- **Controle de Estoque**: Relatório de produtos com estoque baixo
+- **Vendas por Método de Pagamento**: Distribuição das vendas por forma de pagamento (Dinheiro, PIX, Débito, Crédito)
+- **Faturamento por Evento**: Receita total de cada evento (ingressos + produtos)
+- **Top Clientes**: Ranking dos usuários que mais gastaram no sistema
+- **Relatório Geral do Sistema**: Overview completo com estatísticas gerais
 
 ## Arquitetura MVC
 
@@ -40,6 +54,9 @@ Contêm a lógica de negócio e estrutura de dados:
 - `Ingresso`: Gerencia ingressos e operações de compra/revenda
 - `Feedback`: Estrutura para avaliações de eventos
 - `Venda`: Registro de transações do sistema
+- `Produto`: Estrutura para produtos vendidos nos eventos (camisas, copos, etc.)
+- `ItemVenda`: Itens individuais de uma venda
+- `Camisa` e `Copo`: Tipos específicos de produtos
 
 ### Views (Visões)
 Interface de usuário e apresentação de dados:
@@ -47,6 +64,8 @@ Interface de usuário e apresentação de dados:
 - `UsuarioView`: Interface para operações com usuários
 - `EventoView`: Interface para gerenciamento de eventos
 - `IngressoView`: Interface para operações com ingressos
+- `ProdutoView`: Interface para gerenciamento de produtos
+- `RelatorioView`: Interface para exibição de relatórios
 
 ### Controllers (Controladores)
 Lógica de controle entre Models e Views:
@@ -54,6 +73,8 @@ Lógica de controle entre Models e Views:
 - `UsuarioController`: Gerencia operações de usuários
 - `EventoController`: Controla funcionalidades de eventos
 - `IngressoController`: Gerencia operações de ingressos
+- `ProdutoController`: Gerencia operações de produtos
+- `RelatorioController`: Processa e gera relatórios do sistema
 
 ## Estrutura do Projeto
 
@@ -68,19 +89,27 @@ sistema_festas_mvc/
 │   ├── evento.py
 │   ├── ingresso.py
 │   ├── feedback.py
-│   └── venda.py
+│   ├── venda.py
+│   ├── produto.py
+│   ├── item_venda.py
+│   ├── camisa.py
+│   └── copo.py
 ├── views/                # Camada de Views
 │   ├── __init__.py
 │   ├── main_view.py
 │   ├── usuario_view.py
 │   ├── evento_view.py
-│   └── ingresso_view.py
+│   ├── ingresso_view.py
+│   ├── produto_view.py
+│   └── relatorio_view.py
 └── controllers/          # Camada de Controllers
     ├── __init__.py
     ├── main_controller.py
     ├── usuario_controller.py
     ├── evento_controller.py
-    └── ingresso_controller.py
+    ├── ingresso_controller.py
+    ├── produto_controller.py
+    └── relatorio_controller.py
 ```
 
 ## Como Executar
@@ -113,14 +142,19 @@ Ao executar o sistema, você verá o menu principal com as seguintes opções:
 1. **Gerenciar Usuários** - Acesso ao módulo de usuários
 2. **Gerenciar Eventos** - Acesso ao módulo de eventos
 3. **Gerenciar Ingressos** - Acesso ao módulo de ingressos
+4. **Gerenciar Produtos** - Acesso ao módulo de produtos
+5. **Relatórios** - Acesso aos relatórios do sistema
 0. **Finalizar sistema** - Encerra a aplicação
 
 ### Fluxo de Uso Típico
 1. **Cadastrar usuários** no sistema
 2. **Criar eventos** com suas informações
-3. **Usuários compram ingressos** para os eventos
-4. **Sistema de revenda** permite transferência entre usuários
-5. **Avaliações e feedbacks** após os eventos
+3. **Adicionar produtos** aos eventos (camisas, copos, etc.)
+4. **Usuários compram ingressos** para os eventos escolhendo método de pagamento
+5. **Realizar vendas de produtos** durante os eventos
+6. **Sistema de revenda** permite transferência de ingressos entre usuários
+7. **Avaliações e feedbacks** após os eventos
+8. **Gerar relatórios** para análise de desempenho e vendas
 
 ## Características Técnicas
 
@@ -141,6 +175,7 @@ Ao executar o sistema, você verá o menu principal com as seguintes opções:
 - Controle de capacidade de eventos
 - Histórico detalhado de transações
 - Sistema de avaliações com notas e comentários
+- Relatórios de vendas por método de pagamento agora incluem ingressos conforme o método utilizado na compra (Dinheiro, PIX, Débito, Crédito), não mais como categoria separada 'Ingressos'.
 
 ## Limitações Conhecidas
 - Dados armazenados apenas em memória (não persistentes)

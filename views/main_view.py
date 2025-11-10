@@ -1,33 +1,32 @@
+import PySimpleGUI as sg
+
 class MainView:
+    def __init__(self):
+        sg.theme('Reddit')
     
-    def tela_opcoes(self):
-        print("============================================")
-        print("       SISTEMA DE GESTÃO DE FESTAS")
-        print("============================================")
-        print("Escolha a opção:")
-        print("1 - Gerenciar Usuários")
-        print("2 - Gerenciar Eventos")
-        print("3 - Gerenciar Ingressos")
-        print("0 - Finalizar sistema")
-        opcao = int(input("Escolha a opção: "))
-        return opcao
+    def janela_principal(self):
 
-    def mostra_mensagem(self, msg):
-        print(msg)
+        layout = [
+            [sg.Text("============================================", font=("Helvetica", 12))],
+            [sg.Text("       SISTEMA DE GESTÃO DE FESTAS", font=("Helvetica", 16, "bold"))],
+            [sg.Text("============================================", font=("Helvetica", 12))],
+            [sg.Text("Escolha a opção:", font=("Helvetica", 10))],
 
-    def mostra_mensagem_inicial(self):
-        print("============================================")
-        print("    BEM-VINDO AO SISTEMA DE FESTAS!")
-        print("============================================")
+            # Cada botão tem uma 'key' única para o Controller identificar
 
-    def mostra_mensagem_encerramento(self):
-        print("============================================")
-        print("         SISTEMA ENCERRADO!")
-        print("    Obrigado por usar nosso sistema!")
-        print("============================================")
+           [sg.Button('Gerenciar Usuários', key='1', size=(30,1))],
+            [sg.Button('Gerenciar Eventos', key='2', size=(30,1))],
+            [sg.Button('Gerenciar Ingressos', key='3', size=(30,1))],
+            [sg.Button('Gerenciar Produtos', key='4', size=(30,1))],
+            [sg.Button('Relatórios', key='5', size=(30,1))],
+            [sg.Button('Finalizar Sistema', key='0', size=(30,1), button_color=('white', 'darkred'))]
+        ]
+
+        return sg.Window('Sistema de Festas', layout, finalize=True)
+
+    def mostrar_mensagem_encerramento(self):
+        sg.Popup('Sistema Encerrado', 'Obrigado por usar nosso sistema!', keep_on_top=True)
     
-    def mostrar(self):
-       # Método principal para mostrar o sistema
-        self.mostra_mensagem_inicial()
-        opcao = self.tela_opcoes()
-        return opcao
+    # O substituto do seu "mosta_mensagem"
+    def mostrar_mensagem(self, titulo, mensagem):
+        sg.Popup(titulo, mensagem, keep_on_top=True)

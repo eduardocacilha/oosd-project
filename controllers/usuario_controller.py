@@ -1,145 +1,260 @@
-from models.usuario import Usuario
+# Em: controllers/usuario_controller.py
 
+import FreeSimpleGUI as sg
+from views.usuario_view import UsuarioView
+from models.usuario import Usuario
+# Importe os outros models que você precisará
+from models.ingresso import Ingresso
+from models.venda import Venda
+from datetime import date # Necessário para o histórico
 
 class UsuarioController:
-    def __init__(self):
-        self.__usuarios = []
+    
+    def __init__(self, usuario_view: UsuarioView):
+        self.__view = usuario_view
+        # Nota: A lista de usuários é gerenciada pelo Model (Usuario.get_all())
+        # então não precisamos de self.__usuarios aqui.
 
-    def incluir_usuario(self, dados_usuario):
-       # Inclui um novo usuário no sistema
-        # Verifica se já existe usuário com essa matrícula
-        for usuario in self.__usuarios:
-            if usuario.matricula == dados_usuario["matricula"]:
-                return {"sucesso": False, "mensagem": "Já existe um usuário com essa matrícula"}
+    # --- MÉTODO PRINCIPAL DESTE CONTROLLER ---
+    # Este é o método que o MainController chama (evento '1')
+    def rodar_menu_usuario(self):
         
-        # Cria o usuário
-        usuario = Usuario(
-            dados_usuario["matricula"], 
-            dados_usuario["nome"], 
-            dados_usuario["email"]
-        )
-        self.__usuarios.append(usuario)
-        return {"sucesso": True, "mensagem": f"Usuário {dados_usuario['nome']} incluído com sucesso"}
+        # Este loop é para MANTER O MENU ABERTO.
+        while True:
+            # 1. CORREÇÃO: Chamamos o novo método da GUI 'criar_janela_menu_usuario'
+            evento = self.__view.criar_janela_menu_usuario() 
 
-    def listar_usuarios(self):
-       # Lista todos os usuários
-        return self.__usuarios
+            # 2. O Controller reage ao evento que a View retornou
+            if evento == '-VOLTAR-':
+                break # Quebra o loop do *controller* e volta pro Main
+            
+            if evento == '-INCLUIR-':
+                self.fluxo_incluir_usuario()
+                
+            if evento == '-LISTAR-':
+                self.fluxo_listar_usuarios()
+            
+            if evento == '-ALTERAR-':
+                self.fluxo_alterar_usuario()
+            
+            if evento == '-EXCLUIR-':
+                self.fluxo_excluir_usuario()
+                
+            if evento == '-HISTORICO-':
+                self.fluxo_ver_historico_compras()
+                
+            if evento == '-MEUS_INGRESSOS-':
+                self.fluxo_listar_meus_ingressos()
+            
+            if evento == '-AVALIAR-':
+                self.fluxo_avaliar_evento()
 
-    def buscar_usuario_por_matricula(self, matricula):
-       # Busca usuário pela matrícula
-        for usuario in self.__usuarios:
-            if usuario.matricula == matricula:
-                return usuario
-        return None
+    # --- MÉTODOS DE FLUXO (Seus métodos antigos do Controller, agora adaptados) ---
 
-    def excluir_usuario(self, matricula):
-       # Exclui um usuário pela matrícula
-        usuario = self.buscar_usuario_por_matricula(matricula)
-        if usuario is None:
-            return {"sucesso": False, "mensagem": "Usuário não encontrado"}
+    def fluxo_incluir_usuario(self):
+        """
+        Contém a lógica do seu método antigo 'incluir_usuario'.
+        Ele chama a view 'pega_dados_usuario' e processa o resultado.
+        """
+        try:
+            # 1. Pede os dados à View (que abre a janela de cadastro)
+            dados_usuario = self.__view.pega_dados_usuario(pedindo_matricula=True)
+            
+            # 2. Se o usuário NÃO cancelou (retornou dados)
+            if dados_usuario:
+                # 3. Lógica de Negócio (exatamente como no seu controller antigo)
+                if Usuario.get_by_matricula(dados_usuario["matricula"]):
+                    self.__view.mostrar_popup("Erro", f"ERRO: A matrícula {dados_usuario['matricula']} já existe.")
+                    return # Encerra o fluxo
+                
+                # 4. Chama o Model para criar a instância
+                Usuario(
+                    matricula=dados_usuario["matricula"],
+                    nome=dados_usuario["nome"],
+                    email=dados_usuario["email"]
+                )
+                self.__view.mostrar_popup("Sucesso", "Usuário incluído com sucesso!")
         
-        # Verifica se o usuário tem ingressos
-        if len(usuario.ingressos_comprados) > 0:
-            return {"sucesso": False, "mensagem": "Não é possível excluir usuário que possui ingressos"}
+        except Exception as e:
+            self.__view.mostrar_popup("Erro", f"Erro ao incluir usuário: {str(e)}")
+    
+    def fluxo_listar_usuarios(self):
+        """Contém a lógica do seu método antigo 'listar_usuarios'."""
         
-        self.__usuarios.remove(usuario)
-        return {"sucesso": True, "mensagem": f"Usuário {usuario.nome} excluído com sucesso"}
+        usuarios_objetos = Usuario.get_all()
+        
+        # A própria View já trata a lista vazia, então não precisamos de IF aqui.
+        
+        dados_para_view = []
+        for usuario in usuarios_objetos:
+            dados_para_view.append({
+                "matricula": usuario.matricula,
+                "nome": usuario.nome,
+                "email": usuario.email
+            })
+            
+        self.__view.mostra_usuarios(dados_para_view)
 
-    def avaliar_evento(self, matricula_usuario, evento, nota, comentario):
-       # Permite que um usuário avalie um evento
-        usuario = self.buscar_usuario_por_matricula(matricula_usuario)
-        if usuario is None:
-            return {"sucesso": False, "mensagem": "Usuário não encontrado"}
-        
-        if not isinstance(nota, int) or nota < 1 or nota > 5:
-            return {"sucesso": False, "mensagem": "Nota deve ser um número entre 1 e 5"}
-        
-        feedback = usuario.avaliar_evento(evento, nota, comentario)
-        return {"sucesso": True, "mensagem": "Avaliação realizada com sucesso", "feedback": feedback}
+    def fluxo_alterar_usuario(self):
+        """Contém a lógica do seu método antigo 'alterar_usuario'."""
+        try:
+            matricula = self.__view.pega_matricula_usuario()
+            if not matricula: # Usuário cancelou
+                return
 
-    def comprar_ingresso(self, matricula_usuario, evento, preco=None):
-       # Permite que um usuário compre um ingresso
-        usuario = self.buscar_usuario_por_matricula(matricula_usuario)
-        if usuario is None:
-            return {"sucesso": False, "mensagem": "Usuário não encontrado"}
-        
-        ingresso = usuario.comprar_ingresso(evento, preco)
-        return {"sucesso": True, "mensagem": "Ingresso comprado com sucesso", "ingresso": ingresso}
+            usuario = Usuario.get_by_matricula(matricula)
+            if not usuario:
+                self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
+                return
+            
+            dados_atuais = {"matricula": usuario.matricula, "nome": usuario.nome, "email": usuario.email}
+            self.__view.mostra_usuario(dados_atuais)
 
-    def ver_historico_compras(self, matricula_usuario):
-       # Retorna o histórico de compras de um usuário
-        usuario = self.buscar_usuario_por_matricula(matricula_usuario)
-        if usuario is None:
-            return {"sucesso": False, "mensagem": "Usuário não encontrado"}
-        
-        historico = usuario.ver_historico_compras()
-        return {"sucesso": True, "historico": historico}
+            novos_dados = self.__view.pega_dados_usuario(pedindo_matricula=False)
+            if not novos_dados: # Usuário cancelou
+                return
+            
+            usuario.nome = novos_dados["nome"]
+            usuario.email = novos_dados["email"]
+            
+            self.__view.mostrar_popup("Sucesso", "Usuário alterado com sucesso!")
+            
+        except Exception as e:
+            self.__view.mostrar_popup("Erro", f"Erro ao alterar usuário: {str(e)}")
 
-    def listar_ingressos_usuario(self, matricula_usuario):
-       # Lista todos os ingressos de um usuário
-        usuario = self.buscar_usuario_por_matricula(matricula_usuario)
-        if usuario is None:
-            return {"sucesso": False, "mensagem": "Usuário não encontrado"}
-        
-        ingressos = usuario.listar_ingressos()
-        return {"sucesso": True, "ingressos": ingressos}
+    def fluxo_excluir_usuario(self):
+        """Contém a lógica do seu método antigo 'excluir_usuario'."""
+        try:
+            # Adiciona a "guarda" que discutimos
+            if not Usuario.get_all():
+                self.__view.mostrar_popup("Aviso", "Não há usuários cadastrados para excluir.")
+                return
+            
+            matricula = self.__view.pega_matricula_usuario()
+            if not matricula: # Usuário cancelou
+                return
 
-    def colocar_ingresso_a_venda(self, matricula_usuario, ingresso, novo_preco):
-       # Coloca um ingresso à venda
-        usuario = self.buscar_usuario_por_matricula(matricula_usuario)
-        if usuario is None:
-            return {"sucesso": False, "mensagem": "Usuário não encontrado"}
-        
-        if novo_preco <= 0:
-            return {"sucesso": False, "mensagem": "Preço deve ser maior que zero"}
-        
-        if ingresso not in usuario.ingressos_comprados:
-            return {"sucesso": False, "mensagem": "Este ingresso não pertence a este usuário"}
-        
-        ingresso.preco = novo_preco
-        ingresso.revendedor = usuario
-        return {"sucesso": True, "mensagem": f"Ingresso colocado à venda por R$ {novo_preco:.2f}"}
+            usuario = Usuario.get_by_matricula(matricula)
+            if not usuario:
+                self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
+                return
+                
+            if len(usuario.ingressos_comprados) > 0:
+                self.__view.mostrar_popup("Erro", "ERRO: Não é possível excluir usuário que possui ingressos.")
+                return
+                
+            Usuario.remove(usuario) # (Assumindo que 'Usuario.remove()' existe no seu Model)
+            self.__view.mostrar_popup("Sucesso", "Usuário excluído com sucesso!")
+            
+        except Exception as e:
+            self.__view.mostrar_popup("Erro", f"Erro ao excluir usuário: {str(e)}")
 
-    def remover_ingresso_da_venda(self, matricula_usuario, ingresso):
-       # Remove um ingresso da venda
-        usuario = self.buscar_usuario_por_matricula(matricula_usuario)
-        if usuario is None:
-            return {"sucesso": False, "mensagem": "Usuário não encontrado"}
-        
-        if ingresso.revendedor != usuario:
-            return {"sucesso": False, "mensagem": "Este ingresso não está sendo revendido por você"}
-        
-        ingresso.revendedor = None
-        return {"sucesso": True, "mensagem": "Revenda do ingresso cancelada"}
+    def fluxo_ver_historico_compras(self):
+        """Contém a lógica do seu método antigo 'ver_historico_compras'."""
+        try:
+            matricula = self.__view.pega_matricula_usuario()
+            if not matricula: return
 
-    def comprar_ingresso_revenda(self, matricula_comprador, ingresso):
-       # Compra um ingresso em revenda
-        comprador = self.buscar_usuario_por_matricula(matricula_comprador)
-        if comprador is None:
-            return {"sucesso": False, "mensagem": "Usuário comprador não encontrado"}
-        
-        if ingresso.revendedor is None:
-            return {"sucesso": False, "mensagem": "Este ingresso não está em revenda"}
-        
-        if comprador == ingresso.revendedor:
-            return {"sucesso": False, "mensagem": "Você não pode comprar um ingresso de si mesmo"}
-        
-        # Transfere o ingresso
-        revendedor = ingresso.revendedor
-        if ingresso in revendedor.ingressos_comprados:
-            revendedor.ingressos_comprados.remove(ingresso)
-        
-        ingresso.revendedor = None
-        ingresso.comprador = comprador
-        comprador.ingressos_comprados.append(ingresso)
-        
-        return {"sucesso": True, "mensagem": f"Ingresso comprado com sucesso de {revendedor.nome}"}
+            usuario = Usuario.get_by_matricula(matricula)
+            if not usuario:
+                self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
+                return
 
-    def listar_ingressos_a_venda(self, matricula_usuario, lista_ingressos_geral):
-       # Lista ingressos que um usuário está vendendo
-        usuario = self.buscar_usuario_por_matricula(matricula_usuario)
-        if usuario is None:
-            return {"sucesso": False, "mensagem": "Usuário não encontrado"}
+            historico_ingressos = []
+            for ingresso in usuario.ingressos_comprados:
+                historico_ingressos.append({
+                    "tipo": "Ingresso",
+                    "descricao": f"Ingresso para {ingresso.evento.nome}",
+                    "valor": ingresso.preco,
+                    "data": ingresso.data_compra.strftime('%d/%m/%Y'),
+                    "metodo": ingresso.metodo_pagamento
+                })
+
+            historico_vendas = []
+            for venda in usuario.historico_compras:
+                for item in venda.itens:
+                    historico_vendas.append({
+                        "tipo": "Produto",
+                        "descricao": f"{item.quantidade}x {item.produto.nome} - {venda.evento.nome}",
+                        "valor": item.subtotal,
+                        "data": venda.data_hora.strftime('%d/%m/%Y'),
+                        "metodo": venda.metodo_pagamento
+                    })
+
+            historico_completo = historico_ingressos + historico_vendas
+            
+            self.__view.mostra_historico_compras(historico_completo)
         
-        ingressos_a_venda = usuario.listar_ingressos_a_venda(lista_ingressos_geral)
-        return {"sucesso": True, "ingressos_a_venda": ingressos_a_venda}
+        except Exception as e:
+            self.__view.mostrar_popup("Erro", f"Erro ao gerar histórico: {str(e)}")
+
+    def fluxo_listar_meus_ingressos(self):
+        """Contém a lógica do seu método antigo 'listar_meus_ingressos'."""
+        try:
+            matricula = self.__view.pega_matricula_usuario()
+            if not matricula: return
+            
+            usuario = Usuario.get_by_matricula(matricula)
+            if not usuario:
+                self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
+                return
+
+            ingressos_objetos = usuario.ingressos_comprados
+            
+            # A View já trata a lista vazia, mas podemos poupar processamento
+            if not ingressos_objetos:
+                 self.__view.mostra_ingressos_usuario([])
+                 return
+
+            dados_ingressos = []
+            for ingresso in ingressos_objetos:
+                dados_ingressos.append({
+                    "evento_nome": ingresso.evento.nome,
+                    "evento_data": ingresso.evento.data.strftime('%d/%m/%Y'),
+                    "evento_local": ingresso.evento.local,
+                    "preco": ingresso.preco,
+                    "data_compra": ingresso.data_compra.strftime('%d/%m/%Y'),
+                })
+            
+            self.__view.mostra_ingressos_usuario(dados_ingressos)
+        
+        except Exception as e:
+            self.__view.mostrar_popup("Erro", f"Erro ao listar ingressos: {str(e)}")
+
+    def fluxo_avaliar_evento(self):
+        """Contém a lógica do seu método antigo 'avaliar_evento'."""
+        try:
+            # 1. Obter o usuário
+            matricula = self.__view.pega_matricula_usuario()
+            if not matricula: return
+            
+            usuario = Usuario.get_by_matricula(matricula)
+            if not usuario:
+                self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
+                return
+
+            # 2. Obter o evento (PRECISA SER IMPLEMENTADO)
+            # Você precisa de um 'EventoView' com 'seleciona_evento()'
+            # Por enquanto, vamos pular esta parte
+            self.__view.mostrar_popup("Aviso", "A seleção de evento ainda não foi implementada.")
+            return 
+            
+            # --- LÓGICA FUTURA ---
+            # evento = self.__evento_view.seleciona_evento() # (exemplo)
+            # if not evento: return
+
+            # 3. Obter os dados da avaliação
+            # dados_avaliacao = self.__view.pega_dados_avaliacao()
+            # if not dados_avaliacao: return
+            
+            # 4. Chamar o Model
+            # usuario.avaliar_evento(
+            #     evento, 
+            #     dados_avaliacao['nota'], 
+            #     dados_avaliacao['comentario']
+            # )
+            
+            # self.__view.mostrar_popup("Sucesso", "Evento avaliado com sucesso!")
+        
+        except Exception as e:
+            self.__view.mostrar_popup("Erro", f"Erro ao avaliar evento: {str(e)}")
