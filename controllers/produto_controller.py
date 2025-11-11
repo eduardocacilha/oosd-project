@@ -6,6 +6,7 @@ from models.copo import Copo
 from models.venda import Venda
 from models.item_venda import ItemVenda
 from typing import Dict, List
+import FreeSimpleGUI as sg
 
 class ProdutoController:
     def __init__(self, produto_view: ProdutoView, evento_controller: EventoController, usuario_controller: UsuarioController):
@@ -185,30 +186,19 @@ class ProdutoController:
                 if venda is None:
                     venda = Venda(usuario, evento_escolhido, metodo_pagamento)
 
-                item = ItemVenda(produto_escolhido, quantidade, produto_escolhido.preco)
-                venda.adicionar_item(item)
-                itens_adicionados.append(item)
+             
+                venda.adicionar_item(produto_escolhido, quantidade)
+       
                 
                 self.__view.mostra_mensagem(f"Item adicionado: {quantidade}x {produto_escolhido.nome}")
                 
                 continuar = input("Deseja adicionar mais itens? (s/n): ").lower()
+                
                 if continuar != 's':
                     break
 
             except ValueError as e:
                 self.__view.mostra_mensagem(f"Erro: {str(e)}")
-
-        if venda is not None and venda.itens:
-            dados_venda = {
-                "id_venda": venda.id_venda,
-                "cliente": usuario.nome,
-                "evento": evento_escolhido.nome,
-                "total": venda.total,
-                "metodo": metodo_pagamento
-            }
-            self.__view.mostra_venda_realizada(dados_venda)
-        else:
-            self.__view.mostra_mensagem("Nenhum item foi adicionado à venda.")
 
     def relatorio_vendas(self):
         

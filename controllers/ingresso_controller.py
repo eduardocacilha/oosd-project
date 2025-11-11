@@ -2,6 +2,8 @@ from views.ingresso_view import IngressoView
 
 from controllers.usuario_controller import UsuarioController
 from controllers.evento_controller import EventoController
+import FreeSimpleGUI as sg
+
 
 class IngressoController:
     

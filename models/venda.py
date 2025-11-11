@@ -6,6 +6,7 @@ if TYPE_CHECKING:
     from .evento import Evento
 
 from .item_venda import ItemVenda
+from .produto import Produto
 
 class Venda:
     _registros = []
@@ -25,13 +26,16 @@ class Venda:
         
         usuario.adicionar_venda_historico(self)
 
-    def adicionar_item(self, item: ItemVenda):
+    def adicionar_item(self, produto: Produto, quantidade: int):
         
-        if item.produto.verificar_estoque(item.quantidade):
-            item.produto.baixar_estoque(item.quantidade)
-            self.__itens.append(item)
+        preco_do_momento = produto.preco
+        itemvenda = ItemVenda(produto, quantidade, preco_do_momento)
+        
+        if itemvenda.produto.verificar_estoque(itemvenda.quantidade):
+            itemvenda.produto.baixar_estoque(itemvenda.quantidade)
+            self.__itens.append(itemvenda)
         else:
-            raise ValueError(f"Estoque insuficiente para {item.produto.nome}")
+            raise ValueError(f"Estoque insuficiente para {itemvenda.produto.nome}")
 
     @property
     def total(self) -> float:

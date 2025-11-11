@@ -23,14 +23,14 @@ class UsuarioView:
             [sg.Text("============================================")],
             [sg.Text("          GERENCIAR USUÁRIOS")],
             [sg.Text("============================================")],
-            [sg.Button('Incluir Usuário', key='-INCLUIR-', size=(30,1))],
-            [sg.Button('Alterar Usuário', key='-ALTERAR-', size=(30,1))],
-            [sg.Button('Listar Usuários', key='-LISTAR-', size=(30,1))],
-            [sg.Button('Excluir Usuário', key='-EXCLUIR-', size=(30,1))],
-            [sg.Button('Listar Meus Ingressos', key='-MEUS_INGRESSOS-', size=(30,1))],
-            [sg.Button('Ver Meu Histórico de Compras', key='-HISTORICO-', size=(30,1))],
-            [sg.Button('Avaliar um Evento', key='-AVALIAR-', size=(30,1))],
-            [sg.Button('Voltar ao Menu Principal', key='-VOLTAR-', size=(30,1), button_color=('white', 'red'))]
+            [sg.Button('Incluir Usuário', key='1', size=(30,1))],
+            [sg.Button('Alterar Usuário', key='3', size=(30,1))],
+            [sg.Button('Listar Usuários', key='2', size=(30,1))],
+            [sg.Button('Excluir Usuário', key='4', size=(30,1))],
+            [sg.Button('Listar Meus Ingressos', key='6', size=(30,1))],
+            [sg.Button('Ver Meu Histórico de Compras', key='5', size=(30,1))],
+            [sg.Button('Avaliar um Evento', key='7', size=(30,1))],
+            [sg.Button('Voltar ao Menu Principal', key=0, size=(30,1), button_color=('white', 'red'))]
         ]
         
         janela = sg.Window('Menu de Usuários', layout, finalize=True)

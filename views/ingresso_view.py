@@ -1,5 +1,5 @@
 from typing import List, Optional
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 
 class IngressoView:
     

@@ -25,28 +25,28 @@ class UsuarioController:
             evento = self.__view.criar_janela_menu_usuario() 
 
             # 2. O Controller reage ao evento que a View retornou
-            if evento == '-VOLTAR-':
+            if evento == '0':
                 break # Quebra o loop do *controller* e volta pro Main
             
-            if evento == '-INCLUIR-':
+            if evento == '1':
                 self.fluxo_incluir_usuario()
                 
-            if evento == '-LISTAR-':
+            if evento == '2':
                 self.fluxo_listar_usuarios()
             
-            if evento == '-ALTERAR-':
+            if evento == '3':
                 self.fluxo_alterar_usuario()
             
-            if evento == '-EXCLUIR-':
+            if evento == '4':
                 self.fluxo_excluir_usuario()
                 
-            if evento == '-HISTORICO-':
+            if evento == '5':
                 self.fluxo_ver_historico_compras()
                 
-            if evento == '-MEUS_INGRESSOS-':
+            if evento == '6':
                 self.fluxo_listar_meus_ingressos()
             
-            if evento == '-AVALIAR-':
+            if evento == '7':
                 self.fluxo_avaliar_evento()
 
     # --- MÉTODOS DE FLUXO (Seus métodos antigos do Controller, agora adaptados) ---
@@ -239,15 +239,14 @@ class UsuarioController:
             self.__view.mostrar_popup("Aviso", "A seleção de evento ainda não foi implementada.")
             return 
             
-            # --- LÓGICA FUTURA ---
+        
             # evento = self.__evento_view.seleciona_evento() # (exemplo)
             # if not evento: return
 
-            # 3. Obter os dados da avaliação
+    
             # dados_avaliacao = self.__view.pega_dados_avaliacao()
             # if not dados_avaliacao: return
             
-            # 4. Chamar o Model
             # usuario.avaliar_evento(
             #     evento, 
             #     dados_avaliacao['nota'], 

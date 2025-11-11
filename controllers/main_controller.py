@@ -9,7 +9,7 @@ from controllers.evento_controller import EventoController
 from controllers.ingresso_controller import IngressoController
 from controllers.produto_controller import ProdutoController
 from controllers.relatorio_controller import RelatorioController
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 
 class MainController:
     

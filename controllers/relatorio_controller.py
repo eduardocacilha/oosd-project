@@ -8,6 +8,8 @@ from models.venda import Venda
 from models.ingresso import Ingresso
 from typing import List
 from collections import defaultdict
+import FreeSimpleGUI as sg
+
 
 class RelatorioController:
     def __init__(self, relatorio_view: RelatorioView, evento_controller: EventoController, 
