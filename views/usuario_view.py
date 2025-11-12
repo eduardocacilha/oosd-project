@@ -5,15 +5,12 @@ import re
 class UsuarioView:
     
     def __init__(self):
-        # O __init__ agora só define o tema.
         sg.theme('Reddit')
 
-    # --- MÉTODO "Popup" (Substituto do mostra_mensagem) ---
     def mostrar_popup(self, titulo: str, msg: str):
-        """Exibe um popup simples."""
-        sg.Popup(titulo, msg, keep_on_top=True)
+        """Exibe um popup simples, agora com modal=True."""
+        sg.Popup(titulo, msg, keep_on_top=True, modal=True) # Adicionado modal=True
 
-    # --- MÉTODO 1: O ANTIGO "tela_opcoes" ---
     def criar_janela_menu_usuario(self) -> str:
         """
         Cria, exibe e gerencia a janela do MENU de usuários.
@@ -30,7 +27,7 @@ class UsuarioView:
             [sg.Button('Listar Meus Ingressos', key='6', size=(30,1))],
             [sg.Button('Ver Meu Histórico de Compras', key='5', size=(30,1))],
             [sg.Button('Avaliar um Evento', key='7', size=(30,1))],
-            [sg.Button('Voltar ao Menu Principal', key=0, size=(30,1), button_color=('white', 'red'))]
+            [sg.Button('Voltar ao Menu Principal', key='0', size=(30,1), button_color=('white', 'red'))]
         ]
         
         janela = sg.Window('Menu de Usuários', layout, finalize=True)
@@ -39,16 +36,15 @@ class UsuarioView:
         while True:
             evento, valores = janela.read()
             
-            if evento == sg.WINDOW_CLOSED or evento == '-VOLTAR-':
+            if evento == sg.WINDOW_CLOSED or evento == '0':
                 janela.close()
-                return '-VOLTAR-' # Retorna o evento de "saída"
+                return '0' # Retorna o evento de "saída"
             
             # Se o usuário clicar em qualquer outra opção do menu
             else:
                 janela.close()
                 return evento # Retorna o evento que o Controller vai processar
 
-    # --- MÉTODO 2: O ANTIGO "pega_dados_usuario" ---
     def pega_dados_usuario(self, pedindo_matricula=True) -> dict:
         
         layout_matricula = [
@@ -91,7 +87,6 @@ class UsuarioView:
                 janela.close()
                 return {"matricula": matricula, "nome": nome, "email": email}
 
-    # --- MÉTODO 3: O ANTIGO "pega_matricula_usuario" ---
     def pega_matricula_usuario(self) -> str:
         layout = [
             [sg.Text("Digite a matrícula do usuário:")],
@@ -114,7 +109,6 @@ class UsuarioView:
                 else:
                     self.mostrar_popup("Erro", "Matrícula deve conter apenas números!")
 
-    # --- MÉTODO 4: O ANTIGO "mostra_usuarios" ---
     def mostra_usuarios(self, lista_dados_usuarios: List[dict]):
         if not lista_dados_usuarios:
             self.mostrar_popup("Lista de Usuários", "Nenhum usuário cadastrado.")
@@ -138,7 +132,6 @@ class UsuarioView:
         janela.read() 
         janela.close()
         
-    # --- MÉTODO 5: O ANTIGO "pega_dados_avaliacao" ---
     def pega_dados_avaliacao(self) -> dict:
         layout = [
             [sg.Text("\n-------- AVALIAR EVENTO ----------", font=("Helvetica", 14, "bold"))],
@@ -167,7 +160,6 @@ class UsuarioView:
                 janela.close()
                 return {"nota": nota_int, "comentario": comentario}
 
-    # --- MÉTODO 6: O ANTIGO "mostra_usuario" ---
     def mostra_usuario(self, dados_usuario: dict):
         layout = [
             [sg.Text("--- DETALHES DO USUÁRIO ---", font=("Helvetica", 14, "bold"))],
@@ -187,7 +179,6 @@ class UsuarioView:
                 break
         janela.close()
 
-    # --- MÉTODO 7: O ANTIGO "mostra_historico_compras" ---
     def mostra_historico_compras(self, historico_dados: list):
         if not historico_dados:
             self.mostrar_popup("Histórico de Compras", "\nNenhuma compra realizada.")
@@ -220,7 +211,6 @@ class UsuarioView:
                 break
         janela.close()
 
-    # --- MÉTODO 8: O ANTIGO "mostra_ingressos_usuario" ---
     def mostra_ingressos_usuario(self, dados_ingressos: list):
         if not dados_ingressos:
             self.mostrar_popup("Meus Ingressos", "\nVocê não possui ingressos.")

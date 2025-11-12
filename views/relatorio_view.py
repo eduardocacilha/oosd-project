@@ -1,266 +1,490 @@
 from typing import List
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 
 class RelatorioView:
     
-    def tela_opcoes(self) -> int:
-        print("\n======== MENU RELATORIOS ========")
-        print("1 - Relatorios de Eventos")
-        print("2 - Relatorios de Produtos")
-        print("3 - Relatorios de Vendas")
-        print("4 - Relatorios de Usuarios")
-        print("0 - Retornar ao Menu Principal")
+    def __init__(self):
+        sg.theme('Reddit')
         
-        try:
-            return int(input("Escolha a opcao: "))
-        except ValueError:
-            return -1
+    def tela_opcoes(self) -> int:
+        """Cria e gerencia a janela do MENU PRINCIPAL de Relatórios."""
+        
+        layout = [
+            [sg.Text("\n======== MENU RELATORIOS ========", font=("Helvetica", 14, "bold"))],
+            [sg.Button("Relatorios de Eventos", key=1, size=(30,1))],
+            [sg.Button("Relatorios de Produtos", key=2, size=(30,1))],
+            [sg.Button("Relatorios de Vendas", key=3, size=(30,1))],
+            [sg.Button("Relatorios de Usuarios", key=4, size=(30,1))],
+            [sg.Button("Retornar ao Menu Principal", key=0, size=(30,1), button_color=('white', 'red'))]
+        ]
+        
+        janela = sg.Window('Menu Relatórios', layout, finalize=True, modal=True)
+        
+        while True:
+            evento, valores = janela.read()
+            if evento == sg.WINDOW_CLOSED:
+                janela.close()
+                return 0 # Trata o 'X' como 'Retornar'
+            janela.close()
+            return evento # Retorna 1, 2, 3, 4, ou 0
 
     def tela_opcoes_eventos(self) -> int:
-        print("\n-------- RELATORIOS DE EVENTOS ----------")
-        print("1 - Eventos Mais Caros e Mais Baratos")
-        print("2 - Eventos com Melhores Avaliacoes")
-        print("3 - Eventos com Mais Ingressos Vendidos")
-        print("4 - Ranking Completo de Eventos")
-        print("0 - Voltar")
+        """Cria e gerencia a janela do SUB-MENU de Relatórios de Eventos."""
         
-        try:
-            return int(input("Escolha a opcao: "))
-        except ValueError:
-            return -1
+        layout = [
+            [sg.Text("\n-------- RELATORIOS DE EVENTOS ----------", font=("Helvetica", 14, "bold"))],
+            [sg.Button("Eventos Mais Caros e Mais Baratos", key=1, size=(30,1))],
+            [sg.Button("Eventos com Melhores Avaliacoes", key=2, size=(30,1))],
+            [sg.Button("Eventos com Mais Ingressos Vendidos", key=3, size=(30,1))],
+            [sg.Button("Ranking Completo de Eventos", key=4, size=(30,1))],
+            [sg.Button("Voltar", key=0, size=(30,1), button_color=('white', 'red'))]
+        ]
+        
+        janela = sg.Window('Relatórios de Eventos', layout, finalize=True, modal=True)
+        
+        while True:
+            evento, valores = janela.read()
+            if evento == sg.WINDOW_CLOSED:
+                janela.close()
+                return 0
+            janela.close()
+            return evento
 
     def tela_opcoes_produtos(self) -> int:
-        print("\n-------- RELATORIOS DE PRODUTOS ----------")
-        print("1 - Produtos Mais Caros e Mais Baratos")
-        print("2 - Produtos Mais Vendidos")
-        print("3 - Produtos com Maior Faturamento")
-        print("4 - Relatorio de Estoque")
-        print("5 - Ranking Completo de Produtos")
-        print("0 - Voltar")
+        """Cria e gerencia a janela do SUB-MENU de Relatórios de Produtos."""
         
-        try:
-            return int(input("Escolha a opcao: "))
-        except ValueError:
-            return -1
+        layout = [
+            [sg.Text("\n-------- RELATORIOS DE PRODUTOS ----------", font=("Helvetica", 14, "bold"))],
+            [sg.Button("Produtos Mais Caros e Mais Baratos", key=1, size=(30,1))],
+            [sg.Button("Produtos Mais Vendidos", key=2, size=(30,1))],
+            [sg.Button("Produtos com Maior Faturamento", key=3, size=(30,1))],
+            [sg.Button("Relatorio de Estoque", key=4, size=(30,1))],
+            [sg.Button("Ranking Completo de Produtos", key=5, size=(30,1))],
+            [sg.Button("Voltar", key=0, size=(30,1), button_color=('white', 'red'))]
+        ]
+        
+        janela = sg.Window('Relatórios de Produtos', layout, finalize=True, modal=True)
+        
+        while True:
+            evento, valores = janela.read()
+            if evento == sg.WINDOW_CLOSED:
+                janela.close()
+                return 0
+            janela.close()
+            return evento
 
     def tela_opcoes_vendas(self) -> int:
-        print("\n-------- RELATORIOS DE VENDAS ----------")
-        print("1 - Vendas por Metodo de Pagamento")
-        print("2 - Faturamento por Evento")
-        print("3 - Vendas por Periodo")
-        print("4 - Top Clientes")
-        print("0 - Voltar")
+        """Cria e gerencia a janela do SUB-MENU de Relatórios de Vendas."""
         
-        try:
-            return int(input("Escolha a opcao: "))
-        except ValueError:
-            return -1
+        layout = [
+            [sg.Text("\n-------- RELATORIOS DE VENDAS ----------", font=("Helvetica", 14, "bold"))],
+            [sg.Button("Vendas por Metodo de Pagamento", key=1, size=(30,1))],
+            [sg.Button("Faturamento por Evento", key=2, size=(30,1))],
+            [sg.Button("Vendas por Periodo", key=3, size=(30,1))],
+            [sg.Button("Top Clientes", key=4, size=(30,1))],
+            [sg.Button("Voltar", key=0, size=(30,1), button_color=('white', 'red'))]
+        ]
+        
+        janela = sg.Window('Relatórios de Vendas', layout, finalize=True, modal=True)
+        
+        while True:
+            evento, valores = janela.read()
+            if evento == sg.WINDOW_CLOSED:
+                janela.close()
+                return 0
+            janela.close()
+            return evento
 
     def tela_opcoes_usuarios(self) -> int:
-        print("\n-------- RELATORIOS DE USUARIOS ----------")
-        print("1 - Usuarios que Mais Gastaram")
-        print("2 - Usuarios Mais Ativos")
-        print("3 - Usuarios por Quantidade de Ingressos")
-        print("0 - Voltar")
+        """Cria e gerencia a janela do SUB-MENU de Relatórios de Usuários."""
         
-        try:
-            return int(input("Escolha a opcao: "))
-        except ValueError:
-            return -1
+        layout = [
+            [sg.Text("\n-------- RELATORIOS DE USUARIOS ----------", font=("Helvetica", 14, "bold"))],
+            [sg.Button("Usuarios que Mais Gastaram", key=1, size=(30,1))],
+            [sg.Button("Usuarios Mais Ativos", key=2, size=(30,1))],
+            [sg.Button("Usuarios por Quantidade de Ingressos", key=3, size=(30,1))],
+            [sg.Button("Voltar", key=0, size=(30,1), button_color=('white', 'red'))]
+        ]
+        
+        janela = sg.Window('Relatórios de Usuários', layout, finalize=True, modal=True)
+        
+        while True:
+            evento, valores = janela.read()
+            if evento == sg.WINDOW_CLOSED:
+                janela.close()
+                return 0
+            janela.close()
+            return evento
+
 
     def mostra_eventos_preco(self, mais_caros: List[dict], mais_baratos: List[dict]):
-        print("\n======== EVENTOS POR PRECO ========")
+        """Cria uma janela para mostrar os eventos mais caros e mais baratos."""
         
-        print("\nEVENTOS MAIS CAROS:")
+        # Constrói o texto para a coluna "Mais Caros"
+        texto_caros = "EVENTOS MAIS CAROS:\n" + ("-"*20) + "\n"
         if mais_caros:
             for i, evento in enumerate(mais_caros, 1):
-                print(f"{i}. {evento['nome']} - R$ {evento['preco']:.2f}")
-                print(f"   Data: {evento['data']} Local: {evento['local']}")
+                texto_caros += f"{i}. {evento['nome']} - R$ {evento['preco']:.2f}\n"
+                texto_caros += f"   Data: {evento['data']} Local: {evento['local']}\n"
         else:
-            print("Nenhum evento cadastrado.")
-        
-        print("\nEVENTOS MAIS BARATOS:")
+            texto_caros += "Nenhum evento cadastrado."
+
+        # Constrói o texto para a coluna "Mais Baratos"
+        texto_baratos = "EVENTOS MAIS BARATOS:\n" + ("-"*20) + "\n"
         if mais_baratos:
             for i, evento in enumerate(mais_baratos, 1):
-                print(f"{i}. {evento['nome']} - R$ {evento['preco']:.2f}")
-                print(f"   Data: {evento['data']} Local: {evento['local']}")
+                texto_baratos += f"{i}. {evento['nome']} - R$ {evento['preco']:.2f}\n"
+                texto_baratos += f"   Data: {evento['data']} Local: {evento['local']}\n"
         else:
-            print("Nenhum evento cadastrado.")
+            texto_baratos += "Nenhum evento cadastrado."
+            
+        # Usa Colunas para exibir lado a lado
+        layout = [
+            [sg.Text("======== EVENTOS POR PRECO ========", font=("Helvetica", 14, "bold"))],
+            [
+                sg.Column([[sg.Multiline(texto_caros, size=(40, 10), disabled=True, no_scrollbar=True)]]),
+                sg.Column([[sg.Multiline(texto_baratos, size=(40, 10), disabled=True, no_scrollbar=True)]])
+            ],
+            [sg.Button('Fechar')]
+        ]
+        
+        janela = sg.Window('Relatório: Eventos por Preço', layout, modal=True, finalize=True)
+        janela.read()
+        janela.close()
 
     def mostra_eventos_avaliacao(self, eventos: List[dict]):
-        print("\n======== EVENTOS MAIS BEM AVALIADOS ========")
+        """Mostra eventos por avaliação em uma tabela."""
         
         if not eventos:
-            print("Nenhum evento com avaliacoes encontrado.")
+            self.mostra_mensagem("Nenhum evento com avaliacoes encontrado.")
             return
         
+        headings = ['#', 'Nome', 'Nota Média', 'Avaliações', 'Data', 'Local', 'Preço (R$)']
+        dados_tabela = []
         for i, evento in enumerate(eventos, 1):
-            print(f"{i}. {evento['nome']} - {evento['nota_media']:.1f}/5.0")
-            print(f"   {evento['total_avaliacoes']} avaliacoes")
-            print(f"   Data: {evento['data']} Local: {evento['local']}")
-            print(f"   R$ {evento['preco']:.2f}")
-            print()
+            dados_tabela.append([
+                i, evento['nome'], f"{evento['nota_media']:.1f}/5.0",
+                evento['total_avaliacoes'], evento['data'], evento['local'],
+                f"{evento['preco']:.2f}"
+            ])
+            
+        layout = [
+            [sg.Text("======== EVENTOS MAIS BEM AVALIADOS ========", font=("Helvetica", 14, "bold"))],
+            [sg.Table(values=dados_tabela, headings=headings,
+                      auto_size_columns=True, justification='left',
+                      num_rows=min(len(dados_tabela), 15),
+                      key='-TABLE-', expand_x=True, expand_y=True)],
+            [sg.Button('Fechar')]
+        ]
+        
+        janela = sg.Window('Relatório: Eventos por Avaliação', layout, resizable=True, modal=True, finalize=True)
+        janela.read()
+        janela.close()
 
     def mostra_eventos_vendas(self, eventos: List[dict]):
-        print("\n======== EVENTOS COM MAIS INGRESSOS VENDIDOS ========")
+        """Mostra eventos por ingressos vendidos em uma tabela."""
         
         if not eventos:
-            print("Nenhuma venda de ingresso encontrada.")
+            self.mostra_mensagem("Nenhuma venda de ingresso encontrada.")
             return
         
+        headings = ['#', 'Nome', 'Ingressos Vendidos', 'Faturamento (R$)', 'Data', 'Local']
+        dados_tabela = []
         for i, evento in enumerate(eventos, 1):
-            print(f"{i}. {evento['nome']} - {evento['ingressos_vendidos']} ingressos")
-            print(f"   Faturamento: R$ {evento['faturamento']:.2f}")
-            print(f"   Data: {evento['data']} Local: {evento['local']}")
-            print()
+            dados_tabela.append([
+                i, evento['nome'], evento['ingressos_vendidos'],
+                f"{evento['faturamento']:.2f}", evento['data'], evento['local']
+            ])
+            
+        layout = [
+            [sg.Text("======== EVENTOS COM MAIS INGRESSOS VENDIDOS ========", font=("Helvetica", 14, "bold"))],
+            [sg.Table(values=dados_tabela, headings=headings,
+                      auto_size_columns=True, justification='left',
+                      num_rows=min(len(dados_tabela), 15),
+                      key='-TABLE-', expand_x=True, expand_y=True)],
+            [sg.Button('Fechar')]
+        ]
+        
+        janela = sg.Window('Relatório: Eventos por Vendas', layout, resizable=True, modal=True, finalize=True)
+        janela.read()
+        janela.close()
 
     def mostra_ranking_eventos(self, eventos: List[dict]):
-        print("\n======== RANKING COMPLETO DE EVENTOS ========")
+        """Mostra o ranking completo de eventos em uma tabela."""
         
         if not eventos:
-            print("Nenhum evento cadastrado.")
+            self.mostra_mensagem("Nenhum evento cadastrado.")
             return
         
+        headings = ['#', 'Nome', 'Nota', 'Ingressos', 'Faturamento (R$)', 'Data', 'Local', 'Preço (R$)']
+        dados_tabela = []
         for i, evento in enumerate(eventos, 1):
-            nota_str = f"{evento['nota_media']:.1f}" if evento['nota_media'] > 0 else "Sem avaliacoes"
-            print(f"{i}. {evento['nome']}")
-            print(f"   {nota_str} | {evento['ingressos_vendidos']} ingressos | R$ {evento['faturamento']:.2f}")
-            print(f"   Data: {evento['data']} Local: {evento['local']} | Preco: R$ {evento['preco']:.2f}")
-            print()
+            nota_str = f"{evento['nota_media']:.1f}" if evento['nota_media'] > 0 else "N/A"
+            dados_tabela.append([
+                i, evento['nome'], nota_str, evento['ingressos_vendidos'],
+                f"{evento['faturamento']:.2f}", evento['data'], evento['local'],
+                f"{evento['preco']:.2f}"
+            ])
+            
+        layout = [
+            [sg.Text("======== RANKING COMPLETO DE EVENTOS ========", font=("Helvetica", 14, "bold"))],
+            [sg.Table(values=dados_tabela, headings=headings,
+                      auto_size_columns=True, justification='left',
+                      num_rows=min(len(dados_tabela), 15),
+                      key='-TABLE-', expand_x=True, expand_y=True)],
+            [sg.Button('Fechar')]
+        ]
+        
+        janela = sg.Window('Relatório: Ranking de Eventos', layout, resizable=True, modal=True, finalize=True)
+        janela.read()
+        janela.close()
 
     def mostra_produtos_preco(self, mais_caros: List[dict], mais_baratos: List[dict]):
-        print("\n======== PRODUTOS POR PRECO ========")
+        """Mostra produtos mais caros e mais baratos em colunas."""
         
-        print("\nPRODUTOS MAIS CAROS:")
+        texto_caros = "PRODUTOS MAIS CAROS:\n" + ("-"*20) + "\n"
         if mais_caros:
-            for i, produto in enumerate(mais_caros, 1):
-                print(f"{i}. {produto['nome']} - R$ {produto['preco']:.2f}")
-                print(f"   Estoque: {produto['estoque']} | Evento: {produto['evento']}")
+            for i, p in enumerate(mais_caros, 1):
+                texto_caros += f"{i}. {p['nome']} - R$ {p['preco']:.2f}\n"
+                texto_caros += f"   Estoque: {p['estoque']} | Evento: {p['evento']}\n"
         else:
-            print("Nenhum produto cadastrado.")
-        
-        print("\nPRODUTOS MAIS BARATOS:")
+            texto_caros += "Nenhum produto cadastrado."
+
+        texto_baratos = "PRODUTOS MAIS BARATOS:\n" + ("-"*20) + "\n"
         if mais_baratos:
-            for i, produto in enumerate(mais_baratos, 1):
-                print(f"{i}. {produto['nome']} - R$ {produto['preco']:.2f}")
-                print(f"   Estoque: {produto['estoque']} | Evento: {produto['evento']}")
+            for i, p in enumerate(mais_baratos, 1):
+                texto_baratos += f"{i}. {p['nome']} - R$ {p['preco']:.2f}\n"
+                texto_baratos += f"   Estoque: {p['estoque']} | Evento: {p['evento']}\n"
         else:
-            print("Nenhum produto cadastrado.")
+            texto_baratos += "Nenhum produto cadastrado."
+
+        layout = [
+            [sg.Text("======== PRODUTOS POR PRECO ========", font=("Helvetica", 14, "bold"))],
+            [
+                sg.Column([[sg.Multiline(texto_caros, size=(40, 10), disabled=True, no_scrollbar=True)]]),
+                sg.Column([[sg.Multiline(texto_baratos, size=(40, 10), disabled=True, no_scrollbar=True)]])
+            ],
+            [sg.Button('Fechar')]
+        ]
+        
+        janela = sg.Window('Relatório: Produtos por Preço', layout, modal=True, finalize=True)
+        janela.read()
+        janela.close()
 
     def mostra_produtos_vendidos(self, produtos: List[dict]):
-        print("\n======== PRODUTOS MAIS VENDIDOS ========")
+        """Mostra produtos mais vendidos em uma tabela."""
         
         if not produtos:
-            print("Nenhuma venda de produto encontrada.")
+            self.mostra_mensagem("Nenhuma venda de produto encontrada.")
             return
         
+        headings = ['#', 'Nome', 'Qtd. Vendida', 'Faturamento (R$)', 'Estoque Atual']
+        dados_tabela = []
         for i, produto in enumerate(produtos, 1):
-            print(f"{i}. {produto['nome']} - {produto['quantidade_vendida']} unidades")
-            print(f"   Faturamento: R$ {produto['faturamento']:.2f}")
-            print(f"   Estoque atual: {produto['estoque']}")
-            print()
+            dados_tabela.append([
+                i, produto['nome'], produto['quantidade_vendida'],
+                f"{produto['faturamento']:.2f}", produto['estoque']
+            ])
+            
+        layout = [
+            [sg.Text("======== PRODUTOS MAIS VENDIDOS ========", font=("Helvetica", 14, "bold"))],
+            [sg.Table(values=dados_tabela, headings=headings,
+                      auto_size_columns=True, justification='left',
+                      num_rows=min(len(produtos), 15),
+                      key='-TABLE-', expand_x=True, expand_y=True)],
+            [sg.Button('Fechar')]
+        ]
+        
+        janela = sg.Window('Relatório: Produtos Mais Vendidos', layout, resizable=True, modal=True, finalize=True)
+        janela.read()
+        janela.close()
 
     def mostra_produtos_faturamento(self, produtos: List[dict]):
-        print("\n======== PRODUTOS COM MAIOR FATURAMENTO ========")
+        """Mostra produtos com maior faturamento em uma tabela."""
         
         if not produtos:
-            print("Nenhuma venda de produto encontrada.")
+            self.mostra_mensagem("Nenhuma venda de produto encontrada.")
             return
         
+        headings = ['#', 'Nome', 'Faturamento (R$)', 'Qtd. Vendida', 'Preço Unit. (R$)']
+        dados_tabela = []
         for i, produto in enumerate(produtos, 1):
-            print(f"{i}. {produto['nome']} - R$ {produto['faturamento']:.2f}")
-            print(f"   {produto['quantidade_vendida']} unidades vendidas")
-            print(f"   Preco unitario: R$ {produto['preco']:.2f}")
-            print()
+            dados_tabela.append([
+                i, produto['nome'], f"{produto['faturamento']:.2f}",
+                produto['quantidade_vendida'], f"{produto['preco']:.2f}"
+            ])
+            
+        layout = [
+            [sg.Text("======== PRODUTOS COM MAIOR FATURAMENTO ========", font=("Helvetica", 14, "bold"))],
+            [sg.Table(values=dados_tabela, headings=headings,
+                      auto_size_columns=True, justification='left',
+                      num_rows=min(len(produtos), 15),
+                      key='-TABLE-', expand_x=True, expand_y=True)],
+            [sg.Button('Fechar')]
+        ]
+        
+        janela = sg.Window('Relatório: Faturamento de Produtos', layout, resizable=True, modal=True, finalize=True)
+        janela.read()
+        janela.close()
 
     def mostra_relatorio_estoque(self, produtos: List[dict]):
-        print("\n======== RELATORIO DE ESTOQUE ========")
+        """Mostra produtos com estoque baixo e bom em colunas."""
         
         if not produtos:
-            print("Nenhum produto cadastrado.")
+            self.mostra_mensagem("Nenhum produto cadastrado.")
             return
-        
-        print("PRODUTOS COM ESTOQUE BAIXO (<=5):")
+
         estoque_baixo = [p for p in produtos if p['estoque'] <= 5]
-        if estoque_baixo:
-            for produto in estoque_baixo:
-                print(f"  {produto['nome']} - {produto['estoque']} unidades")
-        else:
-            print("Nenhum produto com estoque baixo.")
-        
-        print("\nPRODUTOS COM BOM ESTOQUE (>5):")
         bom_estoque = [p for p in produtos if p['estoque'] > 5]
-        if bom_estoque:
-            for produto in bom_estoque:
-                print(f"{produto['nome']} - {produto['estoque']} unidades")
+
+        texto_baixo = "PRODUTOS COM ESTOQUE BAIXO (<=5):\n" + ("-"*30) + "\n"
+        if estoque_baixo:
+            for p in estoque_baixo:
+                texto_baixo += f" {p['nome']} - {p['estoque']} unidades\n"
         else:
-            print("Nenhum produto com bom estoque.")
+            texto_baixo += "Nenhum produto com estoque baixo."
+
+        texto_bom = "PRODUTOS COM BOM ESTOQUE (>5):\n" + ("-"*30) + "\n"
+        if bom_estoque:
+            for p in bom_estoque:
+                texto_bom += f" {p['nome']} - {p['estoque']} unidades\n"
+        else:
+            texto_bom += "Nenhum produto com bom estoque."
+
+        layout = [
+            [sg.Text("======== RELATORIO DE ESTOQUE ========", font=("Helvetica", 14, "bold"))],
+            [
+                sg.Column([[sg.Multiline(texto_baixo, size=(40, 10), disabled=True, no_scrollbar=True)]]),
+                sg.Column([[sg.Multiline(texto_bom, size=(40, 10), disabled=True, no_scrollbar=True)]])
+            ],
+            [sg.Button('Fechar')]
+        ]
+        
+        janela = sg.Window('Relatório: Estoque de Produtos', layout, modal=True, finalize=True)
+        janela.read()
+        janela.close()
 
     def mostra_vendas_pagamento(self, dados: dict):
-        print("\n======== VENDAS POR METODO DE PAGAMENTO ========")
+        """Mostra um resumo das vendas por método de pagamento."""
         
+        if not dados:
+            self.mostra_mensagem("Nenhuma venda encontrada.")
+            return
+
         total_geral = sum(dados.values())
         
+        texto_relatorio = ""
         for metodo, valor in dados.items():
             percentual = (valor / total_geral * 100) if total_geral > 0 else 0
-            print(f"{metodo}: R$ {valor:.2f} ({percentual:.1f}%)")
+            texto_relatorio += f"{metodo}: R$ {valor:.2f} ({percentual:.1f}%)\n"
         
-        print(f"\nTOTAL GERAL: R$ {total_geral:.2f}")
+        texto_relatorio += f"\nTOTAL GERAL: R$ {total_geral:.2f}"
+
+        layout = [
+            [sg.Text("======== VENDAS POR METODO DE PAGAMENTO ========", font=("Helvetica", 14, "bold"))],
+            [sg.Multiline(texto_relatorio, size=(40, 10), disabled=True, no_scrollbar=True)],
+            [sg.Button('Fechar')]
+        ]
+        
+        janela = sg.Window('Relatório: Vendas por Pagamento', layout, modal=True, finalize=True)
+        janela.read()
+        janela.close()
 
     def mostra_faturamento_evento(self, eventos: List[dict]):
-        print("\n======== FATURAMENTO POR EVENTO ========")
+        """Mostra o faturamento (ingressos + produtos) por evento."""
         
         if not eventos:
-            print("Nenhuma venda encontrada.")
+            self.mostra_mensagem("Nenhuma venda encontrada.")
             return
-        
+
+        texto_relatorio = ""
         total_sistema = 0
         for i, evento in enumerate(eventos, 1):
             faturamento_total = evento['faturamento_ingressos'] + evento['faturamento_produtos']
             total_sistema += faturamento_total
             
-            print(f"{i}. {evento['nome']}")
-            print(f"   Ingressos: R$ {evento['faturamento_ingressos']:.2f}")
-            print(f"   Produtos: R$ {evento['faturamento_produtos']:.2f}")
-            print(f"   TOTAL: R$ {faturamento_total:.2f}")
-            print()
+            texto_relatorio += f"{i}. {evento['nome']}\n"
+            texto_relatorio += f"   Ingressos: R$ {evento['faturamento_ingressos']:.2f}\n"
+            texto_relatorio += f"   Produtos: R$ {evento['faturamento_produtos']:.2f}\n"
+            texto_relatorio += f"   TOTAL: R$ {faturamento_total:.2f}\n\n"
         
-        print(f"FATURAMENTO TOTAL DO SISTEMA: R$ {total_sistema:.2f}")
+        texto_relatorio += f"FATURAMENTO TOTAL DO SISTEMA: R$ {total_sistema:.2f}"
+
+        layout = [
+            [sg.Text("======== FATURAMENTO POR EVENTO ========", font=("Helvetica", 14, "bold"))],
+            [sg.Multiline(texto_relatorio, size=(50, 15), disabled=True)],
+            [sg.Button('Fechar')]
+        ]
+        
+        janela = sg.Window('Relatório: Faturamento por Evento', layout, resizable=True, modal=True, finalize=True)
+        janela.read()
+        janela.close()
 
     def mostra_top_clientes(self, clientes: List[dict]):
-        print("\n======== TOP CLIENTES ========")
+        """Mostra o ranking de top clientes (que mais gastaram)."""
         
         if not clientes:
-            print("Nenhuma compra encontrada.")
+            self.mostra_mensagem("Nenhuma compra encontrada.")
             return
         
+        headings = ['#', 'Nome', 'Matrícula', 'Total Gasto (R$)', 'Ingressos', 'Itens (Produtos)']
+        dados_tabela = []
         for i, cliente in enumerate(clientes, 1):
-            print(f"{i}. {cliente['nome']} (Mat: {cliente['matricula']})")
-            print(f"   Total gasto: R$ {cliente['total_gasto']:.2f}")
-            print(f"   Ingressos: {cliente['ingressos_comprados']}")
-            print(f"   Produtos: {cliente['produtos_comprados']} itens")
-            print()
+            dados_tabela.append([
+                i, cliente['nome'], cliente['matricula'],
+                f"{cliente['total_gasto']:.2f}",
+                cliente['ingressos_comprados'],
+                cliente['produtos_comprados']
+            ])
+
+        layout = [
+            [sg.Text("======== TOP CLIENTES ========", font=("Helvetica", 14, "bold"))],
+            [sg.Table(values=dados_tabela, headings=headings,
+                      auto_size_columns=True, justification='left',
+                      num_rows=min(len(dados_tabela), 10),
+                      key='-TABLE-', expand_x=True, expand_y=True)],
+            [sg.Button('Fechar')]
+        ]
+        
+        janela = sg.Window('Relatório: Top Clientes', layout, resizable=True, modal=True, finalize=True)
+        janela.read()
+        janela.close()
 
     def mostra_relatorio_geral(self, dados: dict):
-        print("\n======== RELATORIO GERAL DO SISTEMA ========")
+        """Mostra um resumo geral de todo o sistema."""
         
-        print(f"ESTATISTICAS GERAIS:")
-        print(f"   Usuarios cadastrados: {dados['total_usuarios']}")
-        print(f"   Eventos cadastrados: {dados['total_eventos']}")
-        print(f"   Produtos cadastrados: {dados['total_produtos']}")
-        print(f"   Ingressos vendidos: {dados['total_ingressos_vendidos']}")
-        print(f"   Itens de produtos vendidos: {dados['total_produtos_vendidos']}")
+        texto_estatisticas = "ESTATISTICAS GERAIS:\n" + ("-"*30) + "\n"
+        texto_estatisticas += f"   Usuarios cadastrados: {dados['total_usuarios']}\n"
+        texto_estatisticas += f"   Eventos cadastrados: {dados['total_eventos']}\n"
+        texto_estatisticas += f"   Produtos cadastrados: {dados['total_produtos']}\n"
+        texto_estatisticas += f"   Ingressos vendidos: {dados['total_ingressos_vendidos']}\n"
+        texto_estatisticas += f"   Itens de produtos vendidos: {dados['total_produtos_vendidos']}\n"
+
+        texto_faturamento = "FATURAMENTO:\n" + ("-"*30) + "\n"
+        texto_faturamento += f"   Ingressos: R$ {dados['faturamento_ingressos']:.2f}\n"
+        texto_faturamento += f"   Produtos: R$ {dados['faturamento_produtos']:.2f}\n"
+        texto_faturamento += f"   TOTAL: R$ {dados['faturamento_total']:.2f}\n"
         
-        print(f"\nFATURAMENTO:")
-        print(f"   Ingressos: R$ {dados['faturamento_ingressos']:.2f}")
-        print(f"   Produtos: R$ {dados['faturamento_produtos']:.2f}")
-        print(f"   TOTAL: R$ {dados['faturamento_total']:.2f}")
-        
+        texto_destaques = "DESTAQUES:\n" + ("-"*30) + "\n"
         if dados.get('evento_mais_popular'):
-            print(f"\nDESTAQUES:")
-            print(f"   Evento mais popular: {dados['evento_mais_popular']}")
-            print(f"   Produto mais vendido: {dados['produto_mais_vendido']}")
-            print(f"   Melhor cliente: {dados['melhor_cliente']}")
+            texto_destaques += f"   Evento mais popular: {dados['evento_mais_popular']}\n"
+            texto_destaques += f"   Produto mais vendido: {dados['produto_mais_vendido']}\n"
+            texto_destaques += f"   Melhor cliente: {dados['melhor_cliente']}\n"
+        else:
+            texto_destaques += "   Nenhuma venda registrada."
+
+        layout = [
+            [sg.Text("======== RELATORIO GERAL DO SISTEMA ========", font=("Helvetica", 14, "bold"))],
+            [sg.Multiline(texto_estatisticas, size=(50, 7), disabled=True, no_scrollbar=True)],
+            [sg.Multiline(texto_faturamento, size=(50, 5), disabled=True, no_scrollbar=True)],
+            [sg.Multiline(texto_destaques, size=(50, 5), disabled=True, no_scrollbar=True)],
+            [sg.Button('Fechar')]
+        ]
+        
+        janela = sg.Window('Relatório Geral do Sistema', layout, modal=True, finalize=True)
+        janela.read()
+        janela.close()
 
     def mostra_mensagem(self, msg: str):
-        print(f"\n{msg}\n")
+        """Método genérico para mostrar mensagens (agora um popup)."""
+        sg.Popup(msg, title="Aviso", keep_on_top=True, modal=True)

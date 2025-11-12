@@ -1,20 +1,93 @@
 from views.ingresso_view import IngressoView
-
 from controllers.usuario_controller import UsuarioController
 from controllers.evento_controller import EventoController
 import FreeSimpleGUI as sg
 
+# Assumindo que os models são importados onde necessário
+from models.usuario import Usuario
+from models.evento import Evento
+from models.ingresso import Ingresso
 
 class IngressoController:
     
-    def __init__(self, ingresso_view: IngressoView, usuario_controller: UsuarioController, evento_controller: EventoController):
+ 
+    def __init__(self, ingresso_view: IngressoView):
         self.__view = ingresso_view
+        # Placeholders que serão injetados pelo MainController
+        self.__usuario_controller: UsuarioController = None
+        self.__evento_controller: EventoController = None
+    
+    def set_usuario_controller(self, usuario_controller: UsuarioController):
         self.__usuario_controller = usuario_controller
+        
+    def set_evento_controller(self, evento_controller: EventoController):
         self.__evento_controller = evento_controller
-        self.__ingressos_sistema = []
+
+
+    def rodar_menu_ingresso(self):
+        """Este é o método que o MainController chama (evento '3')"""
+        
+        while True:
+            # Chama a View, que abre a janela de menu e retorna o NÚMERO (int)
+            opcao = self.__view.tela_opcoes() 
+
+            try:
+                if opcao == 1:
+                    self.comprar_ingresso_de_evento()
+                
+                elif opcao == 2:
+                    matricula = self.__view.pega_matricula_comprador() 
+                    if matricula: 
+                        self.listar_meus_ingressos(matricula)
+                
+                elif opcao == 3:
+                    self.rodar_menu_revenda()
+                
+                elif opcao == 0:
+                    break # Volta para o MainController
+            
+            except Exception as e:
+                self.__view.mostra_mensagem(f"Erro Inesperado: {e}")
+
+
+    def rodar_menu_revenda(self):
+        
+        matricula_usuario = self.__view.pega_matricula_comprador()
+        if not matricula_usuario:
+            return 
+            
+        usuario = self.__usuario_controller.buscar_usuario_por_matricula(matricula_usuario)
+        if not usuario:
+            self.__view.mostra_mensagem("ERRO: Usuário não encontrado.")
+            return
+
+        while True:
+            opcao = self.__view.tela_opcoes_revenda()
+
+            try:
+                if opcao == 1:
+                    self.colocar_ingresso_a_venda(matricula_usuario)
+                
+                elif opcao == 2:
+                    self.remover_ingresso_da_venda(matricula_usuario)
+                
+                elif opcao == 3:
+                    # A matrícula do usuário logado (que é o comprador)
+                    self.comprar_ingresso_revenda(matricula_usuario)
+                
+                elif opcao == 4:
+                    self.listar_meus_ingressos_a_venda(matricula_usuario)
+
+                elif opcao == 0:
+                    break 
+            
+            except Exception as e:
+                self.__view.mostra_mensagem(f"Erro Inesperado: {e}")
+
+
 
     def _transformar_ingresso_para_view(self, ingresso):
-        
+        """Helper para formatar o objeto Ingresso para a View."""
         return {
             "id_ingresso": id(ingresso),
             "nome_evento": ingresso.evento.nome,
@@ -25,40 +98,46 @@ class IngressoController:
         }
 
     def comprar_ingresso_de_evento(self):
+        """Fluxo para comprar um ingresso diretamente de um evento."""
         
-        matricula = self.__view.pega_matricula_comprador()
-        usuario = self.__usuario_controller.buscar_usuario_por_matricula(matricula)
-        if not usuario:
-            self.__view.mostra_mensagem("ERRO: Usuário não encontrado.")
-            return
+        try:
+            matricula = self.__view.pega_matricula_comprador()
+            if not matricula: return 
+            
+            usuario = self.__usuario_controller.buscar_usuario_por_matricula(matricula)
+            if not usuario:
+                self.__view.mostra_mensagem("ERRO: Usuário não encontrado.")
+                return
 
-        eventos = self.__evento_controller._EventoController__eventos
-        if not eventos:
-            self.__view.mostra_mensagem("Nenhum evento disponível para compra.")
-            return
+            eventos = self.__evento_controller.get_eventos_lista() 
+            if not eventos:
+                self.__view.mostra_mensagem("Nenhum evento disponível para compra.")
+                return
+            
+      
+            evento_escolhido = self.__evento_controller.selecionar_evento_gui()
 
-        dados_para_view = [self.__evento_controller._transformar_evento_para_view(e) for e in eventos]
-        indice_escolhido = self.__evento_controller._EventoController__view.seleciona_evento(dados_para_view)
-        if indice_escolhido is None:
-            return
-        
-        evento_escolhido = eventos[indice_escolhido]
-        
-        metodo_pagamento = self.__view.pega_metodo_pagamento()
-        if not metodo_pagamento:
-            return
-        
-        dados_compra = {
-            'evento': evento_escolhido.nome,
-            'preco': evento_escolhido.preco_entrada,
-            'metodo_pagamento': metodo_pagamento
-        }
-        
-        if not self.__view.confirma_compra_ingresso(dados_compra):
-            return
+            if evento_escolhido is None:
+                return
+            
+            metodo_pagamento = self.__view.pega_metodo_pagamento()
+            if not metodo_pagamento:
+                return
+            
+            dados_compra = {
+                'evento': evento_escolhido.nome,
+                'preco': evento_escolhido.preco_entrada,
+                'metodo_pagamento': metodo_pagamento
+            }
+            
+            if not self.__view.confirma_compra_ingresso(dados_compra):
+                return
 
-        ingresso = usuario.comprar_ingresso(evento_escolhido, evento_escolhido.preco_entrada, metodo_pagamento)
-        self.__view.mostra_mensagem(f"Ingresso para '{evento_escolhido.nome}' comprado com sucesso por R$ {ingresso.preco:.2f}!")
+            ingresso = usuario.comprar_ingresso(evento_escolhido, evento_escolhido.preco_entrada, metodo_pagamento)
+            self.__view.mostra_mensagem(f"Ingresso para '{evento_escolhido.nome}' comprado com sucesso por R$ {ingresso.preco:.2f}!")
+        
+        except Exception as e:
+            self.__view.mostra_mensagem(f"Erro ao comprar ingresso: {e}")
 
     def listar_meus_ingressos(self, matricula_usuario: str):
         usuario = self.__usuario_controller.buscar_usuario_por_matricula(matricula_usuario)
@@ -91,14 +170,15 @@ class IngressoController:
             ingresso_selecionado = ingressos_disponiveis[indice_escolhido]
             novo_preco = self.__view.pega_novo_preco_revenda()
 
-            if novo_preco is not None and novo_preco > 0:
+            if novo_preco is not None: 
                 try:
                     usuario.colocar_ingresso_a_venda(ingresso_selecionado, novo_preco)
                     self.__view.mostra_mensagem("Ingresso colocado à venda com sucesso!")
                 except ValueError as e:
                     self.__view.mostra_mensagem(f"ERRO: {e}")
             else:
-                self.__view.mostra_mensagem("Preço inválido. Operação cancelada.")
+                # Se novo_preco is None (usuário cancelou), não mostre "preço inválido"
+                pass 
 
     def comprar_ingresso_revenda(self, matricula_comprador: str):
         comprador = self.__usuario_controller.buscar_usuario_por_matricula(matricula_comprador)
@@ -110,7 +190,7 @@ class IngressoController:
         ingressos_revenda_obj = []
         for u in todos_usuarios:
             for i in u.ingressos_comprados:
-                if i.revendedor and i.revendedor != comprador:
+                if i.revendedor and i.revendedor != comprador: 
                     ingressos_revenda_obj.append(i)
 
         if not ingressos_revenda_obj:
@@ -138,12 +218,8 @@ class IngressoController:
                 return
             
             try:
-                revendedor.ingressos_comprados.remove(ingresso_a_comprar)
-                comprador.ingressos_comprados.append(ingresso_a_comprar)
-                ingresso_a_comprar.comprador = comprador
-                ingresso_a_comprar.revendedor = None
-                ingresso_a_comprar.metodo_pagamento = metodo_pagamento
-                
+                # Assumindo que a lógica está no Model
+                comprador.comprar_ingresso_revenda(ingresso_a_comprar) 
                 self.__view.mostra_mensagem(f"Ingresso comprado de {revendedor.nome} com sucesso!")
             except Exception as e:
                 self.__view.mostra_mensagem(f"Ocorreu um erro na compra: {e}")

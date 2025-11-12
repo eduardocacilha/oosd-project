@@ -1,25 +1,25 @@
-# Em: controllers/usuario_controller.py
-
 import FreeSimpleGUI as sg
 from views.usuario_view import UsuarioView
 from models.usuario import Usuario
-# Importe os outros models que você precisará
 from models.ingresso import Ingresso
 from models.venda import Venda
 from datetime import date # Necessário para o histórico
+from typing import List, TYPE_CHECKING # 1. IMPORTAR TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from controllers.evento_controller import EventoController
+from models.feedback import Feedback
+from models.evento import Evento
 
 class UsuarioController:
     
     def __init__(self, usuario_view: UsuarioView):
         self.__view = usuario_view
-        # Nota: A lista de usuários é gerenciada pelo Model (Usuario.get_all())
-        # então não precisamos de self.__usuarios aqui.
-
-    # --- MÉTODO PRINCIPAL DESTE CONTROLLER ---
-    # Este é o método que o MainController chama (evento '1')
+        self.__evento_controller: 'EventoController' = None 
+        
     def rodar_menu_usuario(self):
         
-        # Este loop é para MANTER O MENU ABERTO.
+     
         while True:
             # 1. CORREÇÃO: Chamamos o novo método da GUI 'criar_janela_menu_usuario'
             evento = self.__view.criar_janela_menu_usuario() 
@@ -49,7 +49,6 @@ class UsuarioController:
             if evento == '7':
                 self.fluxo_avaliar_evento()
 
-    # --- MÉTODOS DE FLUXO (Seus métodos antigos do Controller, agora adaptados) ---
 
     def fluxo_incluir_usuario(self):
         """
@@ -57,17 +56,13 @@ class UsuarioController:
         Ele chama a view 'pega_dados_usuario' e processa o resultado.
         """
         try:
-            # 1. Pede os dados à View (que abre a janela de cadastro)
             dados_usuario = self.__view.pega_dados_usuario(pedindo_matricula=True)
             
-            # 2. Se o usuário NÃO cancelou (retornou dados)
             if dados_usuario:
-                # 3. Lógica de Negócio (exatamente como no seu controller antigo)
                 if Usuario.get_by_matricula(dados_usuario["matricula"]):
                     self.__view.mostrar_popup("Erro", f"ERRO: A matrícula {dados_usuario['matricula']} já existe.")
                     return # Encerra o fluxo
                 
-                # 4. Chama o Model para criar a instância
                 Usuario(
                     matricula=dados_usuario["matricula"],
                     nome=dados_usuario["nome"],
@@ -83,7 +78,6 @@ class UsuarioController:
         
         usuarios_objetos = Usuario.get_all()
         
-        # A própria View já trata a lista vazia, então não precisamos de IF aqui.
         
         dados_para_view = []
         for usuario in usuarios_objetos:
@@ -201,7 +195,6 @@ class UsuarioController:
 
             ingressos_objetos = usuario.ingressos_comprados
             
-            # A View já trata a lista vazia, mas podemos poupar processamento
             if not ingressos_objetos:
                  self.__view.mostra_ingressos_usuario([])
                  return
@@ -233,27 +226,26 @@ class UsuarioController:
                 self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
                 return
 
-            # 2. Obter o evento (PRECISA SER IMPLEMENTADO)
+            # 2. Obter o evento (A ser implementado em conjunto com EventoController)
             # Você precisa de um 'EventoView' com 'seleciona_evento()'
-            # Por enquanto, vamos pular esta parte
             self.__view.mostrar_popup("Aviso", "A seleção de evento ainda não foi implementada.")
             return 
             
-        
-            # evento = self.__evento_view.seleciona_evento() # (exemplo)
-            # if not evento: return
-
-    
-            # dados_avaliacao = self.__view.pega_dados_avaliacao()
-            # if not dados_avaliacao: return
-            
-            # usuario.avaliar_evento(
-            #     evento, 
-            #     dados_avaliacao['nota'], 
-            #     dados_avaliacao['comentario']
-            # )
-            
-            # self.__view.mostrar_popup("Sucesso", "Evento avaliado com sucesso!")
-        
         except Exception as e:
             self.__view.mostrar_popup("Erro", f"Erro ao avaliar evento: {str(e)}")
+            
+    def buscar_usuario_por_matricula(self, matricula: str):
+        return Usuario.get_by_matricula(matricula)
+    
+    def listar_usuarios_objetos(self):
+        return Usuario.get_all()
+        
+    def pega_matricula_usuario_gui(self) -> str:
+        return self.__view.pega_matricula_usuario()
+        
+    def pega_dados_avaliacao_gui(self) -> dict:
+        return self.__view.pega_dados_avaliacao()
+    
+    def set_evento_controller(self, evento_controller: 'EventoController'):
+        """(Injetado pelo MainController) Recebe a instância do EventoController."""
+        self.__evento_controller = evento_controller

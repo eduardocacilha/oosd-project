@@ -22,17 +22,9 @@ class MainController:
         self.__relatorio_view = RelatorioView()
 
         self.__usuario_controller = UsuarioController(self.__usuario_view)
-        self.__evento_controller = EventoController(self.__evento_view, self.__usuario_controller)
-        self.__ingresso_controller = IngressoController(
-            self.__ingresso_view,
-            self.__usuario_controller,
-            self.__evento_controller
-        )
-        self.__produto_controller = ProdutoController(
-            self.__produto_view,
-            self.__evento_controller,
-            self.__usuario_controller
-        )
+        self.__evento_controller = EventoController(self.__evento_view) # Removido o UsuarioController daqui
+        self.__ingresso_controller = IngressoController(self.__ingresso_view) # Removido os controllers daqui
+        self.__produto_controller = ProdutoController(self.__produto_view) # Removido os controllers daqui
         self.__relatorio_controller = RelatorioController(
             self.__relatorio_view,
             self.__evento_controller,
@@ -40,74 +32,53 @@ class MainController:
             self.__produto_controller
         )
 
+        self.__evento_controller.set_usuario_controller(self.__usuario_controller)
+        
+        self.__usuario_controller.set_evento_controller(self.__evento_controller)
+        
+        self.__ingresso_controller.set_usuario_controller(self.__usuario_controller)
+        self.__ingresso_controller.set_evento_controller(self.__evento_controller)
+        
+        self.__produto_controller.set_usuario_controller(self.__usuario_controller)
+        self.__produto_controller.set_evento_controller(self.__evento_controller)
+        
     def iniciar(self):
 
         janela_principal = self.__main_view.janela_principal()
-
-            # 2. O Controller se torna o "dono" do Loop de Eventos
+          
         while True:
-            # 3. O Controller "lê" o que o usuário fez
-            #    O programa fica "congelado" aqui esperando um clique
             evento, valores = janela_principal.read()
             
-            # 4. O Controller toma as decisões com base no 'evento'
-            
-            # Se o usuário fechou no 'X' ou clicou em 'Finalizar' (key='0')
             if evento == sg.WINDOW_CLOSED or evento == '0':
                 self.__main_view.mostrar_mensagem_encerramento()
-                break # Quebra o loop e encerra o programa
+                break 
             
-            # Se clicou em 'Gerenciar Usuários' (key='1')
             elif evento == '1':
-                # Escondemos a janela principal
                 janela_principal.hide() 
-                # O MainController DELEGA para o sub-controller
-                # (que agora também terá seu próprio loop de janela)
                 self.__usuario_controller.rodar_menu_usuario() 
-                # Quando o sub-menu fechar, a janela principal reaparece
                 janela_principal.un_hide()
 
-
-                self.__main_view.mostrar_mensagem("Em Construção", "O menu de usuários ainda será implementado.")
             
-            # Se clicou em 'Gerenciar Eventos' (key='2')
             elif evento == '2':
                  janela_principal.hide()
-                 self.__evento_controller.rodar_menu_evento() # Você precisa adaptar esse método
+                 self.__evento_controller.rodar_menu_evento() 
                  janela_principal.un_hide()
 
-
-
-            
-            # Se clicou em 'Gerenciar Ingressos' (key='3')
             elif evento == '3':
-                # janela_principal.hide()
-                # self.__ingresso_controller.rodar_menu_ingresso() # Você precisa adaptar esse método
-                # janela_principal.un_hide()
+                 janela_principal.hide()
+                 self.__ingresso_controller.rodar_menu_ingresso() 
+                 janela_principal.un_hide()
 
-
-                self.__main_view.mostrar_mensagem("Em Construção", "O menu de ingressos ainda será implementado.")
-                
-            # Se clicou em 'Gerenciar Produtos' (key='4')
             elif evento == '4':
-                # janela_principal.hide()
-                # self.__produto_controller.rodar_menu_produto() # Você precisa adaptar esse método
-                # janela_principal.un_hide()
+                janela_principal.hide()
+                self.__produto_controller.rodar_menu_produto() 
+                janela_principal.un_hide()
 
-
-                self.__main_view.mostrar_mensagem("Em Construção", "O menu de produtos ainda será implementado.")
-
-            # Se clicou em 'Relatórios' (key='5')
             elif evento == '5':
-                # janela_principal.hide()
-                # self.__relatorio_controller.rodar_menu_relatorios() # Você precisa adaptar esse método
-                # janela_principal.un_hide()
+                janela_principal.hide()
+                self.__relatorio_controller.rodar_menu_relatorios() 
+                janela_principal.un_hide()
 
-
-                
-                self.__main_view.mostrar_mensagem("Em Construção", "O menu de relatórios ainda será implementado.")
-
-        # 5. O Controller fecha a janela principal ao sair do loop
         janela_principal.close()
             
     def rodar_submenu_usuario(self):

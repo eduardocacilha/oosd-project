@@ -12,7 +12,6 @@ class MainView:
             [sg.Text("============================================", font=("Helvetica", 12))],
             [sg.Text("Escolha a opção:", font=("Helvetica", 10))],
 
-            # Cada botão tem uma 'key' única para o Controller identificar
 
            [sg.Button('Gerenciar Usuários', key='1', size=(30,1))],
             [sg.Button('Gerenciar Eventos', key='2', size=(30,1))],

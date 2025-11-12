@@ -1,20 +1,63 @@
+from typing import Dict, List
+import FreeSimpleGUI as sg
+
 from views.produto_view import ProdutoView
 from controllers.evento_controller import EventoController
 from controllers.usuario_controller import UsuarioController
+
 from models.camisa import Camisa
 from models.copo import Copo
 from models.venda import Venda
 from models.item_venda import ItemVenda
-from typing import Dict, List
-import FreeSimpleGUI as sg
+from models.produto import Produto # Para type hinting
 
 class ProdutoController:
-    def __init__(self, produto_view: ProdutoView, evento_controller: EventoController, usuario_controller: UsuarioController):
+    
+
+    def __init__(self, produto_view: ProdutoView):
         self.__view = produto_view
-        self.__evento_controller = evento_controller
-        self.__usuario_controller = usuario_controller
-        self.__produtos_por_evento: Dict[str, List] = {}
+        self.__evento_controller: EventoController = None
+        self.__usuario_controller: UsuarioController = None
+        self.__produtos_por_evento: Dict[str, List[Produto]] = {} # Armazena os produtos por nome do evento
         self.__next_produto_id = 1
+
+    def set_usuario_controller(self, usuario_controller: UsuarioController):
+        self.__usuario_controller = usuario_controller
+        
+    def set_evento_controller(self, evento_controller: EventoController):
+        self.__evento_controller = evento_controller
+
+    def rodar_menu_produto(self):
+        """Este é o método que o MainController chama (evento '4')"""
+        
+        while True:
+            opcao = self.__view.tela_opcoes() 
+
+            try:
+                if opcao == 1:
+                    self.adicionar_produto_evento()
+                
+                elif opcao == 2:
+                    self.alterar_produto()
+                
+                elif opcao == 3:
+                    self.listar_produtos_evento()
+                
+                elif opcao == 4:
+                    self.excluir_produto()
+                    
+                elif opcao == 5:
+                    self.registrar_venda()
+                    
+                elif opcao == 6:
+                    self.relatorio_vendas()
+
+                elif opcao == 0:
+                    break # Volta para o MainController
+            
+            except Exception as e:
+                self.__view.mostrar_popup("Erro Inesperado", f"Ocorreu um erro: {e}")
+
 
     def _gerar_id_produto(self) -> int:
         current_id = self.__next_produto_id
@@ -22,85 +65,61 @@ class ProdutoController:
         return current_id
 
     def adicionar_produto_evento(self):
+        """Fluxo de 'Adicionar Produto a um Evento'."""
         
         try:
-            eventos = self.__evento_controller._EventoController__eventos
-            if not eventos:
-                self.__view.mostra_mensagem("Nenhum evento cadastrado.")
-                return
+            evento_escolhido = self.__evento_controller.selecionar_evento_gui()
+            if evento_escolhido is None:
+                return # Usuário cancelou
 
-            dados_eventos = [self.__evento_controller._transformar_evento_para_view(e) for e in eventos]
-            from views.evento_view import EventoView
-            evento_view = EventoView()
-            indice_evento = evento_view.seleciona_evento(dados_eventos)
-            
-            if indice_evento is None:
-                return
-
-            evento_escolhido = eventos[indice_evento]
-            
             tipo = self.__view.escolher_tipo_produto()
+            if tipo == 0: # Cancelar
+                return
             
-            try:
+            dados = None
+            if tipo == 1:
+                dados = self.__view.pega_dados_camisa()
+            elif tipo == 2:
+                dados = self.__view.pega_dados_copo()
+            else:
+                self.__view.mostrar_popup("Aviso", "Tipo de produto inválido.")
+                return
+
+            if dados is not None:
+                produto = None
                 if tipo == 1:
-                    dados = self.__view.pega_dados_camisa()
                     produto = Camisa(
                         id_produto=self._gerar_id_produto(),
-                        nome=dados["nome"],
-                        preco=dados["preco"],
-                        estoque=dados["estoque"],
-                        tamanho=dados["tamanho"],
-                        cor=dados["cor"]
+                        nome=dados["nome"], preco=dados["preco"], estoque=dados["estoque"],
+                        tamanho=dados["tamanho"], cor=dados["cor"]
                     )
                 elif tipo == 2:
-                    dados = self.__view.pega_dados_copo()
                     produto = Copo(
                         id_produto=self._gerar_id_produto(),
-                        nome=dados["nome"],
-                        preco=dados["preco"],
-                        estoque=dados["estoque"],
-                        capacidade_ml=dados["capacidade_ml"],
-                        material=dados["material"]
+                        nome=dados["nome"], preco=dados["preco"], estoque=dados["estoque"],
+                        capacidade_ml=dados["capacidade_ml"], material=dados["material"]
                     )
-                else:
-                    self.__view.mostra_mensagem("Tipo de produto inválido.")
-                    return
 
                 nome_evento = evento_escolhido.nome
                 if nome_evento not in self.__produtos_por_evento:
                     self.__produtos_por_evento[nome_evento] = []
                 
                 self.__produtos_por_evento[nome_evento].append(produto)
-                self.__view.mostra_mensagem(f"Produto '{produto.nome}' adicionado ao evento '{nome_evento}' com sucesso!")
-                
-            except (ValueError, KeyError) as e:
-                self.__view.mostra_mensagem(f"Erro nos dados do produto: {str(e)}")
+                self.__view.mostrar_popup("Sucesso", f"Produto '{produto.nome}' adicionado ao evento '{nome_evento}'!")
                 
         except Exception as e:
-            self.__view.mostra_mensagem(f"Erro inesperado: {str(e)}")
+            self.__view.mostrar_popup("Erro", f"Erro inesperado ao adicionar produto: {str(e)}")
 
     def listar_produtos_evento(self):
-        
         try:
-            eventos = self.__evento_controller._EventoController__eventos
-            if not eventos:
-                self.__view.mostra_mensagem("Nenhum evento cadastrado.")
+            evento_escolhido = self.__evento_controller.selecionar_evento_gui()
+            if evento_escolhido is None:
                 return
 
-            dados_eventos = [self.__evento_controller._transformar_evento_para_view(e) for e in eventos]
-            from views.evento_view import EventoView
-            evento_view = EventoView()
-            indice_evento = evento_view.seleciona_evento(dados_eventos)
-            
-            if indice_evento is None:
-                return
-
-            evento_escolhido = eventos[indice_evento]
             nome_evento = evento_escolhido.nome
-            
             produtos = self.__produtos_por_evento.get(nome_evento, [])
-            dados_produtos = []
             
+            dados_produtos = []
             for produto in produtos:
                 dados_produtos.append({
                     "descricao": produto.descricao(),
@@ -111,44 +130,37 @@ class ProdutoController:
             self.__view.mostra_produtos(dados_produtos)
             
         except Exception as e:
-            self.__view.mostra_mensagem(f"Erro inesperado: {str(e)}")
+            self.__view.mostrar_popup("Erro", f"Erro inesperado ao listar produtos: {str(e)}")
 
     def registrar_venda(self):
+        """Fluxo de 'Registrar Venda' (o mais complexo)."""
         
-        eventos = self.__evento_controller._EventoController__eventos
-        if not eventos:
-            self.__view.mostra_mensagem("Nenhum evento cadastrado.")
-            return
+        evento_escolhido = self.__evento_controller.selecionar_evento_gui()
+        if evento_escolhido is None: return
 
-        dados_eventos = [self.__evento_controller._transformar_evento_para_view(e) for e in eventos]
-        from views.evento_view import EventoView
-        evento_view = EventoView()
-        indice_evento = evento_view.seleciona_evento(dados_eventos)
-        
-        if indice_evento is None:
-            return
-
-        evento_escolhido = eventos[indice_evento]
         nome_evento = evento_escolhido.nome
-        
         produtos = self.__produtos_por_evento.get(nome_evento, [])
         if not produtos:
-            self.__view.mostra_mensagem("Nenhum produto cadastrado para este evento.")
+            self.__view.mostrar_popup("Erro", "Nenhum produto cadastrado para este evento.")
             return
 
-        matricula = self.__usuario_controller._UsuarioController__view.pega_matricula_usuario()
+        matricula = self.__usuario_controller.pega_matricula_usuario_gui()
+        if not matricula: return
+        
         usuario = self.__usuario_controller.buscar_usuario_por_matricula(matricula)
         if not usuario:
-            self.__view.mostra_mensagem("Usuário não encontrado.")
+            self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
             return
 
         metodo_pagamento = self.__view.pega_metodo_pagamento()
+        if not metodo_pagamento: return
 
-        venda = None
-        itens_adicionados = []
+        venda = None # A venda só será criada se o usuário adicionar o primeiro item
 
         while True:
+            
             dados_produtos = []
+            produtos_com_estoque = []
             for produto in produtos:
                 if produto.estoque > 0:
                     dados_produtos.append({
@@ -156,51 +168,53 @@ class ProdutoController:
                         "preco": produto.preco,
                         "estoque": produto.estoque
                     })
+                    produtos_com_estoque.append(produto)
 
             if not dados_produtos:
-                self.__view.mostra_mensagem("Nenhum produto com estoque disponível.")
+                self.__view.mostrar_popup("Aviso", "Nenhum produto com estoque disponível.")
                 break
 
             indice_produto = self.__view.seleciona_produto(dados_produtos)
             if indice_produto is None:
-                break
+                break 
 
-            produto_escolhido = None
-            contador = 0
-            for produto in produtos:
-                if produto.estoque > 0:
-                    if contador == indice_produto:
-                        produto_escolhido = produto
-                        break
-                    contador += 1
-
-            if produto_escolhido is None:
-                continue
+            produto_escolhido = produtos_com_estoque[indice_produto]
 
             try:
                 quantidade = self.__view.pega_quantidade_venda()
-                if quantidade <= 0:
-                    self.__view.mostra_mensagem("Quantidade deve ser maior que zero.")
-                    continue
+                if quantidade is None:
+                    continue # Usuário cancelou a quantidade, volta a selecionar produto
 
                 if venda is None:
                     venda = Venda(usuario, evento_escolhido, metodo_pagamento)
 
-             
-                venda.adicionar_item(produto_escolhido, quantidade)
-       
+                venda.adicionar_item(produto_escolhido, quantidade) # (Assumindo que Venda.py tem 'adicionar_item')
                 
-                self.__view.mostra_mensagem(f"Item adicionado: {quantidade}x {produto_escolhido.nome}")
+                self.__view.mostrar_popup("Sucesso", f"Item adicionado: {quantidade}x {produto_escolhido.nome}")
                 
-                continuar = input("Deseja adicionar mais itens? (s/n): ").lower()
-                
-                if continuar != 's':
-                    break
+                if not self.__view.confirma_continuar_comprando():
+                    break 
 
             except ValueError as e:
-                self.__view.mostra_mensagem(f"Erro: {str(e)}")
+                self.__view.mostrar_popup("Erro", f"Erro ao adicionar item: {str(e)}")
+
+        if venda is not None and venda.itens:
+            # Adiciona a venda ao Model do Evento (se necessário)
+            evento_escolhido.registrar_venda(venda)
+            
+            dados_venda = {
+                "id_venda": venda.id_venda,
+                "cliente": usuario.nome,
+                "evento": evento_escolhido.nome,
+                "total": venda.total,
+                "metodo": metodo_pagamento
+            }
+            self.__view.mostra_venda_realizada(dados_venda)
+        else:
+            self.__view.mostrar_popup("Aviso", "Venda cancelada pois nenhum item foi adicionado.")
 
     def relatorio_vendas(self):
+        """Fluxo de 'Relatório de Vendas'."""
         
         vendas = Venda.get_all()
         dados_vendas = []
@@ -218,29 +232,20 @@ class ProdutoController:
         self.__view.mostra_relatorio_vendas(dados_vendas)
 
     def alterar_produto(self):
+        """Fluxo de 'Alterar Produto'."""
         
         try:
-            eventos = self.__evento_controller._EventoController__eventos
-            if not eventos:
-                self.__view.mostra_mensagem("Nenhum evento cadastrado.")
-                return
+            # 1. Seleciona o Evento
+            evento_escolhido = self.__evento_controller.selecionar_evento_gui()
+            if evento_escolhido is None: return
 
-            dados_eventos = [self.__evento_controller._transformar_evento_para_view(e) for e in eventos]
-            from views.evento_view import EventoView
-            evento_view = EventoView()
-            indice_evento = evento_view.seleciona_evento(dados_eventos)
-            
-            if indice_evento is None:
-                return
-
-            evento_escolhido = eventos[indice_evento]
             nome_evento = evento_escolhido.nome
-            
             produtos = self.__produtos_por_evento.get(nome_evento, [])
             if not produtos:
-                self.__view.mostra_mensagem("Nenhum produto cadastrado para este evento.")
+                self.__view.mostrar_popup("Erro", "Nenhum produto cadastrado para este evento.")
                 return
 
+            # 2. Seleciona o Produto
             dados_produtos = []
             for produto in produtos:
                 dados_produtos.append({
@@ -255,54 +260,47 @@ class ProdutoController:
 
             produto_escolhido = produtos[indice_produto]
             
-            try:
-                if isinstance(produto_escolhido, Camisa):
-                    novos_dados = self.__view.pega_dados_camisa()
-                    produto_escolhido.nome = novos_dados["nome"]
-                    produto_escolhido.preco = novos_dados["preco"]
-                    produto_escolhido.estoque = novos_dados["estoque"]
-                    produto_escolhido.tamanho = novos_dados["tamanho"]
-                    produto_escolhido.cor = novos_dados["cor"]
-                elif isinstance(produto_escolhido, Copo):
-                    novos_dados = self.__view.pega_dados_copo()
-                    produto_escolhido.nome = novos_dados["nome"]
-                    produto_escolhido.preco = novos_dados["preco"]
-                    produto_escolhido.estoque = novos_dados["estoque"]
-                    produto_escolhido.capacidade_ml = novos_dados["capacidade_ml"]
-                    produto_escolhido.material = novos_dados["material"]
+            # 3. Pede os novos dados (usando o formulário específico)
+            novos_dados = None
+            if isinstance(produto_escolhido, Camisa):
+                novos_dados = self.__view.pega_dados_camisa()
+            elif isinstance(produto_escolhido, Copo):
+                novos_dados = self.__view.pega_dados_copo()
+            
+            if novos_dados is None:
+                return # Usuário cancelou
 
-                self.__view.mostra_mensagem("Produto alterado com sucesso!")
-                
-            except (ValueError, KeyError) as e:
-                self.__view.mostra_mensagem(f"Erro ao alterar produto: {str(e)}")
+            # 4. Atualiza o Model
+            produto_escolhido.nome = novos_dados["nome"]
+            produto_escolhido.preco = novos_dados["preco"]
+            produto_escolhido.estoque = novos_dados["estoque"]
+            if isinstance(produto_escolhido, Camisa):
+                produto_escolhido.tamanho = novos_dados["tamanho"]
+                produto_escolhido.cor = novos_dados["cor"]
+            elif isinstance(produto_escolhido, Copo):
+                produto_escolhido.capacidade_ml = novos_dados["capacidade_ml"]
+                produto_escolhido.material = novos_dados["material"]
+
+            self.__view.mostrar_popup("Sucesso", "Produto alterado com sucesso!")
                 
         except Exception as e:
-            self.__view.mostra_mensagem(f"Erro inesperado: {str(e)}")
+            self.__view.mostrar_popup("Erro", f"Erro inesperado ao alterar produto: {str(e)}")
 
     def excluir_produto(self):
+        """Fluxo de 'Excluir Produto'."""
         
         try:
-            eventos = self.__evento_controller._EventoController__eventos
-            if not eventos:
-                self.__view.mostra_mensagem("Nenhum evento cadastrado.")
-                return
+            # 1. Seleciona o Evento
+            evento_escolhido = self.__evento_controller.selecionar_evento_gui()
+            if evento_escolhido is None: return
 
-            dados_eventos = [self.__evento_controller._transformar_evento_para_view(e) for e in eventos]
-            from views.evento_view import EventoView
-            evento_view = EventoView()
-            indice_evento = evento_view.seleciona_evento(dados_eventos)
-            
-            if indice_evento is None:
-                return
-
-            evento_escolhido = eventos[indice_evento]
             nome_evento = evento_escolhido.nome
-            
             produtos = self.__produtos_por_evento.get(nome_evento, [])
             if not produtos:
-                self.__view.mostra_mensagem("Nenhum produto cadastrado para este evento.")
+                self.__view.mostrar_popup("Erro", "Nenhum produto cadastrado para este evento.")
                 return
 
+            # 2. Seleciona o Produto
             dados_produtos = []
             for produto in produtos:
                 dados_produtos.append({
@@ -317,13 +315,23 @@ class ProdutoController:
 
             produto_escolhido = produtos[indice_produto]
             
-            print(f"\nProduto selecionado: {produto_escolhido.descricao()}")
-            confirmacao = input("Deseja realmente excluir este produto? (s/n): ").lower().strip()
-            if confirmacao == 's':
+            # 3. Confirma a exclusão (Substituindo o 'input')
+            resposta = sg.popup_yes_no(
+                f"Deseja realmente excluir este produto?\n\n{produto_escolhido.descricao()}",
+                title="Confirmar Exclusão",
+                keep_on_top=True
+            )
+            
+            if resposta == 'Yes':
+                # 4. Remove o produto
                 produtos.remove(produto_escolhido)
-                self.__view.mostra_mensagem("Produto excluído com sucesso!")
+                self.__view.mostrar_popup("Sucesso", "Produto excluído com sucesso!")
             else:
-                self.__view.mostra_mensagem("Exclusão cancelada.")
+                self.__view.mostrar_popup("Aviso", "Exclusão cancelada.")
                 
         except Exception as e:
-            self.__view.mostra_mensagem(f"Erro inesperado: {str(e)}")
+            self.__view.mostrar_popup("Erro", f"Erro inesperado ao excluir produto: {str(e)}")
+            
+    def get_produtos_por_evento_lista(self) -> Dict[str, List[Produto]]:
+        """Retorna o dicionário de produtos por evento."""
+        return self.__produtos_por_evento

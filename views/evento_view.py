@@ -1,6 +1,6 @@
 from typing import List, Optional
 import FreeSimpleGUI as sg
-import datetime
+from datetime import datetime
 
 class EventoView:
     
@@ -43,27 +43,27 @@ class EventoView:
         # O CalendarButton facilita a vida do usuário e a validação
         layout = [
             [sg.Text("\n-------- DADOS DO EVENTO ----------", font=("Helvetica", 14, "bold"))],
-            [sg.Text("Nome:", size=(10,1)), sg.Input(key='-NOME-')],
-            [sg.Text("Data:", size=(10,1)), sg.Input(key='-DATA-', size=(10,1)), 
+            [sg.Text("Nome:", size=(10,1)), sg.Input(key='1')],
+            [sg.Text("Data:", size=(10,1)), sg.Input(key='2', size=(10,1)), 
              sg.CalendarButton('Escolher', target='-DATA-', format='%d/%m/%Y')],
-            [sg.Text("Local:", size=(10,1)), sg.Input(key='-LOCAL-')],
-            [sg.Text("Preço (R$):", size=(10,1)), sg.Input(key='-PRECO-', size=(10,1))],
-            [sg.Button('Salvar', key='-SALVAR-'), sg.Button('Cancelar', key='-CANCELAR-')]
+            [sg.Text("Local:", size=(10,1)), sg.Input(key='3')],
+            [sg.Text("Preço (R$):", size=(10,1)), sg.Input(key='4', size=(10,1))],
+            [sg.Button('Salvar', key='5'), sg.Button('Cancelar', key='6')]
         ]
         
         janela = sg.Window('Dados do Evento', layout, modal=True, finalize=True)
         
         while True:
             evento, valores = janela.read()
-            if evento == sg.WINDOW_CLOSED or evento == '-CANCELAR-':
+            if evento == sg.WINDOW_CLOSED or evento == '6':
                 janela.close()
                 return None # Retorna None se o usuário cancelar
 
-            if evento == '-SALVAR-':
-                nome = valores['-NOME-'].strip()
-                data_str = valores['-DATA-'].strip()
-                local = valores['-LOCAL-'].strip()
-                preco_str = valores['-PRECO-'].strip()
+            if evento == '5':
+                nome = valores['1'].strip()
+                data_str = valores['2'].strip()
+                local = valores['3'].strip()
+                preco_str = valores['4'].strip()
                 
                 # Validação 1: Nome
                 if not nome:
@@ -118,7 +118,7 @@ class EventoView:
             [sg.Text("Preço:", size=(10, 1), font=("Helvetica", 10, "bold")), 
              sg.Text(f"R$ {dados_evento['preco_entrada']:.2f}")],
             [sg.Text("-----------------------------")],
-            [sg.Button('OK', key='-OK-')]
+            [sg.Button('OK', Okey='1')]
         ]
         
         janela = sg.Window('Detalhes do Evento', layout, modal=True, finalize=True)
@@ -155,7 +155,7 @@ class EventoView:
             [sg.Table(values=dados_tabela, headings=headings,
                       auto_size_columns=True, justification='left',
                       num_rows=min(len(dados_tabela), 15),
-                      key='-TABLE-', expand_x=True, expand_y=True)],
+                      key='1', expand_x=True, expand_y=True)],
             [sg.Button('Fechar')]
         ]
         
@@ -188,13 +188,13 @@ class EventoView:
             [sg.Text("Avaliação Média:", size=(15, 1), font=("Helvetica", 10, "bold")), 
              sg.Text(nota_str)],
             [sg.Text("------------------------------------")],
-            [sg.Button('OK', key='-OK-')]
+            [sg.Button('OK', key='1')]
         ]
         
         janela = sg.Window('Detalhes do Evento', layout, modal=True, finalize=True)
         while True:
             evento, valores = janela.read()
-            if evento == sg.WINDOW_CLOSED or evento == '-OK-':
+            if evento == sg.WINDOW_CLOSED or evento == '1':
                 break
         janela.close()
 
@@ -223,7 +223,7 @@ class EventoView:
                       auto_size_columns=True, justification='left',
                       col_widths=[5, 15, 5, 30, 10], # Ajusta o tamanho da coluna de comentário
                       num_rows=min(len(dados_tabela), 10),
-                      key='-TABLE-', expand_x=True, expand_y=True)],
+                      key='1', expand_x=True, expand_y=True)],
             [sg.Button('Fechar')]
         ]
         
@@ -258,11 +258,11 @@ class EventoView:
             [sg.Table(values=dados_tabela, headings=headings,
                       auto_size_columns=True, justification='left',
                       num_rows=min(len(dados_tabela), 15),
-                      key='-TABLE-', 
+                      key='1', 
                       enable_events=True, # Habilita eventos de clique na tabela
                       select_mode=sg.TABLE_SELECT_MODE_BROWSE, # Permite selecionar 1 linha
                       expand_x=True, expand_y=True)],
-            [sg.Button('Selecionar', key='-SELECIONAR-'), sg.Button('Cancelar', key='-CANCELAR-')]
+            [sg.Button('Selecionar', key='2'), sg.Button('Cancelar', key='3')]
         ]
         
         janela = sg.Window('Selecionar Evento', layout, resizable=True, modal=True, finalize=True)
@@ -270,14 +270,14 @@ class EventoView:
         while True:
             evento, valores = janela.read()
             
-            if evento == sg.WINDOW_CLOSED or evento == '-CANCELAR-':
+            if evento == sg.WINDOW_CLOSED or evento == '3':
                 janela.close()
                 return None
             
-            if evento == '-SELECIONAR-':
-                # 'valores' é um dicionário. A chave '-TABLE-' contém
+            if evento == '2':
+                # 'valores' é um dicionário. A chave '1' contém
                 # uma LISTA de índices de linhas selecionadas.
-                indices_selecionados = valores['-TABLE-']
+                indices_selecionados = valores['1']
                 
                 if not indices_selecionados:
                     # Se o usuário não selecionou nenhuma linha

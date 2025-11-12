@@ -19,10 +19,39 @@ class RelatorioController:
         self.__usuario_controller = usuario_controller
         self.__produto_controller = produto_controller
 
+    # Este é o método que o MainController chama (evento '5')
+    def rodar_menu_relatorios(self):
+        
+        while True:
+            # 1. Chama a View, que abre a janela de menu e retorna o NÚMERO (int)
+            opcao = self.__view.tela_opcoes() 
+
+            try:
+                if opcao == 1:
+                    self.rodar_menu_eventos()
+                
+                elif opcao == 2:
+                    self.rodar_menu_produtos()
+                
+                elif opcao == 3:
+                    self.rodar_menu_vendas()
+                
+                elif opcao == 4:
+                    self.rodar_menu_usuarios()
+
+                elif opcao == 0:
+                    break # Volta para o MainController
+            
+            except Exception as e:
+                self.__view.mostra_mensagem(f"Erro Inesperado: {e}")
+                
+
     def relatorio_eventos_preco(self):
         
         try:
-            eventos = self.__evento_controller._EventoController__eventos
+            # ATENÇÃO: Acessar '__eventos' diretamente viola o encapsulamento.
+            # O ideal é usar o 'get_eventos_lista()' que criamos no EventoController.
+            eventos = self.__evento_controller.get_eventos_lista()
             if not eventos:
                 self.__view.mostra_mensagem("Nenhum evento cadastrado.")
                 return
@@ -56,7 +85,7 @@ class RelatorioController:
     def relatorio_eventos_avaliacao(self):
         
         try:
-            eventos = self.__evento_controller._EventoController__eventos
+            eventos = self.__evento_controller.get_eventos_lista()
             if not eventos:
                 self.__view.mostra_mensagem("Nenhum evento cadastrado.")
                 return
@@ -85,7 +114,7 @@ class RelatorioController:
     def relatorio_eventos_vendas(self):
         
         try:
-            eventos = self.__evento_controller._EventoController__eventos
+            eventos = self.__evento_controller.get_eventos_lista()
             if not eventos:
                 self.__view.mostra_mensagem("Nenhum evento cadastrado.")
                 return
@@ -124,7 +153,7 @@ class RelatorioController:
     def relatorio_ranking_eventos(self):
         
         try:
-            eventos = self.__evento_controller._EventoController__eventos
+            eventos = self.__evento_controller.get_eventos_lista()
             if not eventos:
                 self.__view.mostra_mensagem("Nenhum evento cadastrado.")
                 return
@@ -160,8 +189,10 @@ class RelatorioController:
         
         try:
             todos_produtos = []
-            produtos_por_evento = self.__produto_controller._ProdutoController__produtos_por_evento
-            
+            # ATENÇÃO: Acessar '_ProdutoController__produtos_por_evento' viola o encapsulamento.
+            # O ideal é o ProdutoController ter um 'get_todos_produtos()'
+            produtos_por_evento = self.__produto_controller.get_produtos_por_evento_lista() # Supondo que este método exista
+
             for nome_evento, produtos in produtos_por_evento.items():
                 for produto in produtos:
                     todos_produtos.append({
@@ -231,7 +262,7 @@ class RelatorioController:
                     vendas_por_produto[produto_nome]['produto'] = item.produto
             
             if not vendas_por_produto:
-                self.__view.mostra_mensagem("Nenhuma venda de produto encontrada.")
+                self.__view.mostra_mensagem("Nenhuma venda de produto encontrada.") # Corrigido: mostra_mensagem
                 return
             
             produtos_ordenados = []
@@ -255,7 +286,7 @@ class RelatorioController:
         
         try:
             todos_produtos = []
-            produtos_por_evento = self.__produto_controller._ProdutoController__produtos_por_evento
+            produtos_por_evento = self.__produto_controller.get_produtos_por_evento_lista() # Supondo que este método exista
             
             for nome_evento, produtos in produtos_por_evento.items():
                 for produto in produtos:
@@ -331,7 +362,7 @@ class RelatorioController:
             
             eventos_ordenados.sort(key=lambda e: e['faturamento_total'], reverse=True)
             
-            self.__view.mostra_faturamento_evento(eventos_ordenados)
+            self.__view.mostra_faturamento_evento(eventos_ordenados) # Corrigido: mostra_faturamento_evento
             
         except Exception as e:
             self.__view.mostra_mensagem(f"Erro ao gerar relatório: {str(e)}")
@@ -385,10 +416,10 @@ class RelatorioController:
         
         try:
             total_usuarios = len(Usuario.get_all())
-            total_eventos = len(self.__evento_controller._EventoController__eventos)
+            total_eventos = len(self.__evento_controller.get_eventos_lista())
             
             total_produtos = 0
-            produtos_por_evento = self.__produto_controller._ProdutoController__produtos_por_evento
+            produtos_por_evento = self.__produto_controller.get_produtos_por_evento_lista() # Supondo que este método exista
             for produtos in produtos_por_evento.values():
                 total_produtos += len(produtos)
             
@@ -446,23 +477,21 @@ class RelatorioController:
         except Exception as e:
             self.__view.mostra_mensagem(f"Erro ao gerar relatório: {str(e)}")
 
+
     def rodar_menu_eventos(self):
         
         while True:
-            print("\n-------- RELATORIOS DE EVENTOS ----------")
-            print("1 - Eventos Mais Caros e Mais Baratos")
-            print("2 - Eventos com Melhores Avaliacoes")
-            print("0 - Voltar")
-            
-            try:
-                opcao = int(input("Escolha a opcao: "))
-            except ValueError:
-                opcao = -1
+            # Chama a View, que abre a janela de menu e retorna o NÚMERO (int)
+            opcao = self.__view.tela_opcoes_eventos()
                 
             if opcao == 1:
                 self.relatorio_eventos_preco()
             elif opcao == 2:
                 self.relatorio_eventos_avaliacao()
+            elif opcao == 3:
+                self.relatorio_eventos_vendas() # Seu código original não tinha essa opção
+            elif opcao == 4:
+                self.relatorio_ranking_eventos() # Seu código original não tinha essa opção
             elif opcao == 0:
                 break
             else:
@@ -471,20 +500,20 @@ class RelatorioController:
     def rodar_menu_produtos(self):
         
         while True:
-            print("\n-------- RELATORIOS DE PRODUTOS ----------")
-            print("1 - Produtos Mais Caros e Mais Baratos")
-            print("2 - Produtos Mais Vendidos")
-            print("0 - Voltar")
-            
-            try:
-                opcao = int(input("Escolha a opcao: "))
-            except ValueError:
-                opcao = -1
+            # Chama a View, que abre a janela de menu e retorna o NÚMERO (int)
+            opcao = self.__view.tela_opcoes_produtos()
                 
             if opcao == 1:
                 self.relatorio_produtos_preco()
             elif opcao == 2:
                 self.relatorio_produtos_vendidos()
+            elif opcao == 3:
+                self.relatorio_produtos_faturamento() # Seu código original não tinha essa opção
+            elif opcao == 4:
+                self.relatorio_estoque() # Seu código original não tinha essa opção
+            elif opcao == 5:
+                # self.relatorio_ranking_produtos() # Você precisa criar este método
+                self.__view.mostra_mensagem("Função ainda não implementada.")
             elif opcao == 0:
                 break
             else:
@@ -493,20 +522,18 @@ class RelatorioController:
     def rodar_menu_vendas(self):
         
         while True:
-            print("\n-------- RELATORIOS DE VENDAS ----------")
-            print("1 - Vendas por Metodo de Pagamento")
-            print("2 - Faturamento por Evento")
-            print("0 - Voltar")
-            
-            try:
-                opcao = int(input("Escolha a opcao: "))
-            except ValueError:
-                opcao = -1
+            # Chama a View, que abre a janela de menu e retorna o NÚMERO (int)
+            opcao = self.__view.tela_opcoes_vendas()
                 
             if opcao == 1:
                 self.relatorio_vendas_pagamento()
             elif opcao == 2:
                 self.relatorio_faturamento_evento()
+            elif opcao == 3:
+                # self.relatorio_vendas_periodo() # Você precisa criar este método
+                self.__view.mostra_mensagem("Função ainda não implementada.")
+            elif opcao == 4:
+                self.relatorio_top_clientes() # Seu código original não tinha essa opção
             elif opcao == 0:
                 break
             else:
@@ -515,17 +542,15 @@ class RelatorioController:
     def rodar_menu_usuarios(self):
         
         while True:
-            print("\n-------- RELATORIOS DE USUARIOS ----------")
-            print("1 - Top 10 Melhores Clientes")
-            print("0 - Voltar")
-            
-            try:
-                opcao = int(input("Escolha a opcao: "))
-            except ValueError:
-                opcao = -1
+            # Chama a View, que abre a janela de menu e retorna o NÚMERO (int)
+            opcao = self.__view.tela_opcoes_usuarios()
                 
             if opcao == 1:
                 self.relatorio_top_clientes()
+            elif opcao == 2:
+                 self.__view.mostra_mensagem("Função 'Usuários Mais Ativos' ainda não implementada.")
+            elif opcao == 3:
+                 self.__view.mostra_mensagem("Função 'Usuários por Ingressos' ainda não implementada.")
             elif opcao == 0:
                 break
             else:
