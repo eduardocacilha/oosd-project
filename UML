@@ -81,6 +81,7 @@ package "Controllers" {
     }
 }
 
+
 ' =============== CAMADA DE MODELS ===============
 package "Models" {
     ' --- Entidades Principais ---
@@ -120,13 +121,12 @@ package "Models" {
         + __init__(usuario, evento, nota)
     }
 
-    ' --- Hierarquia de Produto (Exemplo de Herança) ---
+    ' --- Hierarquia de Produto ---
     abstract class Produto {
         - id_produto: int
         - nome: str
         - preco: float
         + __init__(id, nome, preco, estoque)
-        + baixar_estoque(qtd)
         + {abstract} descricao()
     }
     class Camisa extends Produto {
@@ -140,47 +140,84 @@ package "Models" {
         + __init__(id_produto: int, nome: str, preco: float, estoque: int, capacidade_ml: int, material: str)
         + descricao()
     }
+    
+    ' ========== RELACIONAMENTOS DO MODEL (Corrigidos) ==========
+
+
+    ' --- 2. Composição ---
+    ' (Uma Venda CONTÉM 1 ou mais ItensVenda)
+    Venda "1" *-- "1..*" ItemVenda : contém >
+    
+    ' --- 3. Agregação ---
+    ' (Um Evento OFERECE 0 ou mais Produtos)
+    Evento "1" o-- "0..*" Produto : oferece >
+    
+    ' --- 4. Associações (O que faltava) ---
+    
+    ' Usuário <-> Venda
+    ' (Um Usuário FAZ 0 ou mais Vendas)
+    Usuario "1" --> "0..*" Venda : faz >
+    
+    ' Usuário <-> Feedback
+    ' (Um Usuário ESCREVE 0 ou mais Feedbacks)
+    Usuario "1" --> "0..*" Feedback : escreve >
+    
+    ' Evento <-> Feedback
+    ' (Um Evento RECEBE 0 ou mais Feedbacks)
+    Evento "1" --> "0..*" Feedback : < recebe
+    
+    ' Evento <-> Ingresso
+    ' (Um Evento EMITE 0 ou mais Ingressos)
+    Evento "1" --> "0..*" Ingresso : emite >
+    
+    ' Ingresso <-> Usuario (Comprador)
+    ' (Um Ingresso tem 1 Comprador)
+    Ingresso "1" --> "1" Usuario : comprador
+    
+    ' Ingresso <-> Usuario (Revendedor)
+    ' (Um Ingresso tem 0 ou 1 Revendedor)
+    Ingresso "1" --> "0..1" Usuario : revendedor
+    
+    ' ItemVenda <-> Produto
+    ' (Um ItemVenda REFERE-SE A 1 Produto)
+    ItemVenda "1" --> "1" Produto : refere-se a
 }
-
-' ========== 4 TIPOS DE RELACIONAMENTO (Exemplificados no Model) ==========
-
-
-' 2. COMPOSIÇÃO (Ciclo de vida dependente)
-' Uma Venda "é composta por" Itens. Se a Venda é deletada, os Itens também são.
-Venda "1" *-- "1..*" ItemVenda
-
-' 3. AGREGAÇÃO (Ciclo de vida independente)
-' Um Evento "tem" Produtos. Se o Evento é cancelado, os Produtos continuam no estoque.
-Evento "1" o-- "*" Produto
-
-' 4. ASSOCIAÇÃO (Conexão entre objetos)
-' Um Ingresso "está associado a" um Usuário (o comprador).
-Ingresso --> "1" Usuario : comprador
-
 
 ' ========== RELACIONAMENTOS DO PADRÃO MVC ==========
 
-' --- O Controller Principal orquestra os outros ---
-MainController --> UsuarioController
-MainController --> EventoController
-MainController --> IngressoController
-MainController --> ProdutoController
-MainController --> RelatorioController
-
 ' --- A View depende do seu Controller ---
-MainView --> MainController
-UsuarioView --> UsuarioController
-EventoView --> EventoController
-IngressoView --> IngressoController
-ProdutoView --> ProdutoController
-RelatorioView --> RelatorioController
+MainView ..> MainController
+UsuarioView ..> UsuarioController
+EventoView ..> EventoController
+IngressoView ..> IngressoController
+ProdutoView ..> ProdutoController
+RelatorioView ..> RelatorioController
 
 ' --- O Controller depende do seu Model ---
-UsuarioController --> Usuario
-EventoController --> Evento
-IngressoController --> Ingresso
-ProdutoController --> Produto
-ProdutoController --> Venda
-RelatorioController --> Venda
+UsuarioController ..> Usuario
+EventoController ..> Evento
+IngressoController ..> Ingresso
+ProdutoController ..> Produto
+ProdutoController ..> Venda
+RelatorioController ..> Venda
+RelatorioController ..> Ingresso
+RelatorioController ..> Evento
+Usuario --> Venda
+Evento --> Ingresso
+Produto --> ItemVenda
+
+' --- Controllers conversam entre si (Injeção de Dependência) ---
+MainController ..> UsuarioController
+MainController ..> EventoController
+MainController ..> IngressoController
+MainController ..> ProdutoController
+MainController ..> RelatorioController
+IngressoController ..> UsuarioController
+IngressoController ..> EventoController
+ProdutoController ..> UsuarioController
+ProdutoController ..> EventoController
+RelatorioController ..> UsuarioController
+RelatorioController ..> EventoController
+RelatorioController ..> ProdutoController
 
 @enduml

@@ -4,6 +4,7 @@ from typing import List, Optional
 from .venda import Venda
 from .feedback import Feedback
 from .evento import Evento
+from exceptions.regraDeNegocioException import RegraDeNegocioException
 
 class Usuario:
     _registros: List['Usuario'] = []
@@ -11,7 +12,13 @@ class Usuario:
 
     def __init__(self, matricula: str, nome: str, email: str):
         if not matricula.isdigit():
-            raise ValueError("Matrícula deve conter apenas números")
+            raise RegraDeNegocioException("Matrícula deve conter apenas números")
+        
+        if not nome or len(nome) < 2:
+            raise RegraDeNegocioException("Nome deve ter pelo menos 2 caracteres")
+        
+        if not email or "@" not in email:
+            raise RegraDeNegocioException("Email inválido")
         
         self.__matricula = matricula
         self.__nome = nome
@@ -32,41 +39,94 @@ class Usuario:
         return list(cls._registros)
 
     @classmethod
+    def add(cls, usuario: 'Usuario'):
+        """Adiciona um usuário ao repositório"""
+        if usuario not in cls._registros:
+            cls._registros.append(usuario)
+
+    @classmethod
     def remove(cls, usuario: 'Usuario'):
+        """Remove um usuário do repositório"""
         if usuario in cls._registros:
             cls._registros.remove(usuario)
 
     def comprar_ingresso(self, evento: Evento, preco: Optional[float] = None, metodo_pagamento: str = "Não informado") -> 'Ingresso':
-        from .ingresso import Ingresso
-        if preco is None:
-            preco = getattr(evento, 'preco_entrada', 0.0)
+        """Compra um ingresso para um evento"""
+        try:
+            from .ingresso import Ingresso
+            
+            if evento is None:
+                raise RegraDeNegocioException("Evento não pode ser nulo")
+            
+            if preco is None:
+                preco = getattr(evento, 'preco_entrada', 0.0)
+            
+            if preco < 0:
+                raise RegraDeNegocioException("Preço do ingresso não pode ser negativo")
 
-        ingresso = Ingresso(evento, self, date.today(), preco, metodo_pagamento)
-        self.__ingressos_comprados.append(ingresso)
+            ingresso = Ingresso(evento, self, date.today(), preco, metodo_pagamento)
+            self.__ingressos_comprados.append(ingresso)
+            
+            if hasattr(evento, 'registrar_compra_ingresso'):
+                evento.registrar_compra_ingresso(ingresso)
+            
+            return ingresso
         
-        if hasattr(evento, 'registrar_compra_ingresso'):
-            evento.registrar_compra_ingresso(ingresso)
-        
-        return ingresso
+        except RegraDeNegocioException:
+            raise
+        except Exception as e:
+            raise RegraDeNegocioException(f"Erro ao comprar ingresso: {str(e)}")
         
     def colocar_ingresso_a_venda(self, ingresso: 'Ingresso', novo_preco: float):
-        if ingresso not in self.__ingressos_comprados:
-            raise ValueError("Este ingresso não pertence a este usuário.")
+        """Coloca um ingresso à venda com novo preço"""
+        try:
+            if ingresso not in self.__ingressos_comprados:
+                raise RegraDeNegocioException("Este ingresso não pertence a este usuário")
+            
+            if novo_preco <= 0:
+                raise RegraDeNegocioException("Preço deve ser maior que zero")
+            
+            ingresso.preco = novo_preco
+            ingresso.revendedor = self
         
-        ingresso.preco = novo_preco
-        ingresso.revendedor = self
+        except RegraDeNegocioException:
+            raise
+        except Exception as e:
+            raise RegraDeNegocioException(f"Erro ao colocar ingresso à venda: {str(e)}")
 
     def remover_ingresso_da_venda(self, ingresso: 'Ingresso'):
-        if ingresso.revendedor != self:
-            raise ValueError("Este ingresso não está sendo revendido por você.")
+        """Remove um ingresso da revenda"""
+        try:
+            if ingresso.revendedor != self:
+                raise RegraDeNegocioException("Este ingresso não está sendo revendido por você")
+            
+            ingresso.revendedor = None
         
-        ingresso.revendedor = None
+        except RegraDeNegocioException:
+            raise
+        except Exception as e:
+            raise RegraDeNegocioException(f"Erro ao remover ingresso da venda: {str(e)}")
 
     def adicionar_venda_historico(self, venda: Venda):
-        self.__historico_compras.append(venda)
+        """Adiciona uma venda ao histórico do usuário"""
+        try:
+            if venda is None:
+                raise RegraDeNegocioException("Venda não pode ser nula")
+            
+            self.__historico_compras.append(venda)
+        
+        except RegraDeNegocioException:
+            raise
+        except Exception as e:
+            raise RegraDeNegocioException(f"Erro ao adicionar venda ao histórico: {str(e)}")
 
     def listar_ingressos(self) -> List['Ingresso']:
-        return list(self.__ingressos_comprados)
+        """Lista todos os ingressos do usuário"""
+        try:
+            return list(self.__ingressos_comprados)
+        except Exception as e:
+            raise RegraDeNegocioException(f"Erro ao listar ingressos: {str(e)}")
+
     @property
     def matricula(self) -> str:
         return self.__matricula
@@ -77,6 +137,8 @@ class Usuario:
 
     @nome.setter
     def nome(self, value: str):
+        if not value or len(value) < 2:
+            raise RegraDeNegocioException("Nome deve ter pelo menos 2 caracteres")
         self.__nome = value
 
     @property
@@ -85,6 +147,8 @@ class Usuario:
 
     @email.setter
     def email(self, value: str):
+        if not value or "@" not in value:
+            raise RegraDeNegocioException("Email inválido")
         self.__email = value
         
     @property

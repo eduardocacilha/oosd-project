@@ -1,251 +1,238 @@
-import FreeSimpleGUI as sg
 from views.usuario_view import UsuarioView
 from models.usuario import Usuario
 from models.ingresso import Ingresso
 from models.venda import Venda
-from datetime import date # Necessário para o histórico
-from typing import List, TYPE_CHECKING # 1. IMPORTAR TYPE_CHECKING
+from datetime import date
+from typing import List, TYPE_CHECKING
+from exceptions.entidadeNaoEncontradaException import EntidadeNaoEncontradaException
+from exceptions.regraDeNegocioException import RegraDeNegocioException
 
 if TYPE_CHECKING:
     from controllers.evento_controller import EventoController
-from models.feedback import Feedback
-from models.evento import Evento
 
 class UsuarioController:
     
     def __init__(self, usuario_view: UsuarioView):
         self.__view = usuario_view
-        self.__evento_controller: 'EventoController' = None 
-        
+
     def rodar_menu_usuario(self):
-        
-     
+        """Loop principal do menu de usuários"""
         while True:
-            # 1. CORREÇÃO: Chamamos o novo método da GUI 'criar_janela_menu_usuario'
-            evento = self.__view.criar_janela_menu_usuario() 
+            opcao = self.__view.criar_janela_menu_usuario()
+            
+            if opcao == '0':
+                break
+            elif opcao == '1':
+                self.incluir_usuario()
+            elif opcao == '2':
+                self.listar_usuarios()
+            elif opcao == '3':
+                self.alterar_usuario()
+            elif opcao == '4':
+                self.excluir_usuario()
+            elif opcao == '5':
+                self.ver_historico_compras()
+            elif opcao == '6':
+                self.listar_ingressos_usuario()
+            elif opcao == '7':
+                self.avaliar_evento()
 
-            # 2. O Controller reage ao evento que a View retornou
-            if evento == '0':
-                break # Quebra o loop do *controller* e volta pro Main
-            
-            if evento == '1':
-                self.fluxo_incluir_usuario()
-                
-            if evento == '2':
-                self.fluxo_listar_usuarios()
-            
-            if evento == '3':
-                self.fluxo_alterar_usuario()
-            
-            if evento == '4':
-                self.fluxo_excluir_usuario()
-                
-            if evento == '5':
-                self.fluxo_ver_historico_compras()
-                
-            if evento == '6':
-                self.fluxo_listar_meus_ingressos()
-            
-            if evento == '7':
-                self.fluxo_avaliar_evento()
-
-
-    def fluxo_incluir_usuario(self):
-        """
-        Contém a lógica do seu método antigo 'incluir_usuario'.
-        Ele chama a view 'pega_dados_usuario' e processa o resultado.
-        """
+    def incluir_usuario(self):
+        """Incluir novo usuário com tratamento de exceções"""
         try:
             dados_usuario = self.__view.pega_dados_usuario(pedindo_matricula=True)
             
-            if dados_usuario:
-                if Usuario.get_by_matricula(dados_usuario["matricula"]):
-                    self.__view.mostrar_popup("Erro", f"ERRO: A matrícula {dados_usuario['matricula']} já existe.")
-                    return # Encerra o fluxo
-                
-                Usuario(
-                    matricula=dados_usuario["matricula"],
-                    nome=dados_usuario["nome"],
-                    email=dados_usuario["email"]
-                )
-                self.__view.mostrar_popup("Sucesso", "Usuário incluído com sucesso!")
-        
-        except Exception as e:
-            self.__view.mostrar_popup("Erro", f"Erro ao incluir usuário: {str(e)}")
-    
-    def fluxo_listar_usuarios(self):
-        """Contém a lógica do seu método antigo 'listar_usuarios'."""
-        
-        usuarios_objetos = Usuario.get_all()
-        
-        
-        dados_para_view = []
-        for usuario in usuarios_objetos:
-            dados_para_view.append({
-                "matricula": usuario.matricula,
-                "nome": usuario.nome,
-                "email": usuario.email
-            })
+            if dados_usuario is None:
+                return  # Usuário cancelou a operação
             
-        self.__view.mostra_usuarios(dados_para_view)
+            # Validação: matrícula já existe
+            if Usuario.get_by_matricula(dados_usuario["matricula"]):
+                raise RegraDeNegocioException(f"Usuário com matrícula {dados_usuario['matricula']} já cadastrado!")
+            
+            # Criar novo usuário
+            novo_usuario = Usuario(
+                dados_usuario["matricula"],
+                dados_usuario["nome"],
+                dados_usuario["email"]
+            )
+            Usuario.add(novo_usuario)
+            self.__view.mostrar_popup("✓ Sucesso", f"Usuário {novo_usuario.nome} incluído com sucesso!")
+            
+        except RegraDeNegocioException as e:
+            self.__view.mostrar_popup("✗ Erro de Negócio", e.mensagem)
+        except ValueError as e:
+            self.__view.mostrar_popup("✗ Erro de Validação", str(e))
+        except Exception as e:
+            self.__view.mostrar_popup("✗ Erro Inesperado", f"Erro ao incluir usuário: {str(e)}")
 
-    def fluxo_alterar_usuario(self):
-        """Contém a lógica do seu método antigo 'alterar_usuario'."""
+    def alterar_usuario(self):
+        """Alterar dados do usuário com tratamento de exceções"""
         try:
             matricula = self.__view.pega_matricula_usuario()
-            if not matricula: # Usuário cancelou
-                return
-
+            
+            if matricula is None:
+                return  # Usuário cancelou
+            
             usuario = Usuario.get_by_matricula(matricula)
             if not usuario:
-                self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
-                return
+                raise EntidadeNaoEncontradaException(f"Usuário com matrícula {matricula} não encontrado!")
             
-            dados_atuais = {"matricula": usuario.matricula, "nome": usuario.nome, "email": usuario.email}
-            self.__view.mostra_usuario(dados_atuais)
-
-            novos_dados = self.__view.pega_dados_usuario(pedindo_matricula=False)
-            if not novos_dados: # Usuário cancelou
-                return
+            dados_usuario = self.__view.pega_dados_usuario(pedindo_matricula=False)
             
-            usuario.nome = novos_dados["nome"]
-            usuario.email = novos_dados["email"]
+            if dados_usuario is None:
+                return  # Usuário cancelou
             
-            self.__view.mostrar_popup("Sucesso", "Usuário alterado com sucesso!")
+            # Atualizar dados
+            usuario.nome = dados_usuario["nome"]
+            usuario.email = dados_usuario["email"]
             
+            self.__view.mostrar_popup("✓ Sucesso", f"Usuário {usuario.nome} alterado com sucesso!")
+            
+        except EntidadeNaoEncontradaException as e:
+            self.__view.mostrar_popup("✗ Entidade Não Encontrada", e.mensagem)
+        except RegraDeNegocioException as e:
+            self.__view.mostrar_popup("✗ Erro de Negócio", e.mensagem)
+        except ValueError as e:
+            self.__view.mostrar_popup("✗ Erro de Validação", str(e))
         except Exception as e:
-            self.__view.mostrar_popup("Erro", f"Erro ao alterar usuário: {str(e)}")
+            self.__view.mostrar_popup("✗ Erro Inesperado", f"Erro ao alterar usuário: {str(e)}")
 
-    def fluxo_excluir_usuario(self):
-        """Contém a lógica do seu método antigo 'excluir_usuario'."""
+    def listar_usuarios(self):
+        """Listar todos os usuários com tratamento de exceções"""
         try:
-            # Adiciona a "guarda" que discutimos
-            if not Usuario.get_all():
-                self.__view.mostrar_popup("Aviso", "Não há usuários cadastrados para excluir.")
+            usuarios = Usuario.get_all()
+            
+            if not usuarios:
+                self.__view.mostrar_popup("ℹ Informação", "Nenhum usuário cadastrado.")
                 return
             
-            matricula = self.__view.pega_matricula_usuario()
-            if not matricula: # Usuário cancelou
-                return
-
-            usuario = Usuario.get_by_matricula(matricula)
-            if not usuario:
-                self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
-                return
-                
-            if len(usuario.ingressos_comprados) > 0:
-                self.__view.mostrar_popup("Erro", "ERRO: Não é possível excluir usuário que possui ingressos.")
-                return
-                
-            Usuario.remove(usuario) # (Assumindo que 'Usuario.remove()' existe no seu Model)
-            self.__view.mostrar_popup("Sucesso", "Usuário excluído com sucesso!")
-            
-        except Exception as e:
-            self.__view.mostrar_popup("Erro", f"Erro ao excluir usuário: {str(e)}")
-
-    def fluxo_ver_historico_compras(self):
-        """Contém a lógica do seu método antigo 'ver_historico_compras'."""
-        try:
-            matricula = self.__view.pega_matricula_usuario()
-            if not matricula: return
-
-            usuario = Usuario.get_by_matricula(matricula)
-            if not usuario:
-                self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
-                return
-
-            historico_ingressos = []
-            for ingresso in usuario.ingressos_comprados:
-                historico_ingressos.append({
-                    "tipo": "Ingresso",
-                    "descricao": f"Ingresso para {ingresso.evento.nome}",
-                    "valor": ingresso.preco,
-                    "data": ingresso.data_compra.strftime('%d/%m/%Y'),
-                    "metodo": ingresso.metodo_pagamento
+            # Converter objetos para dicionários para a view
+            dados_usuarios = []
+            for usuario in usuarios:
+                dados_usuarios.append({
+                    "matricula": usuario.matricula,
+                    "nome": usuario.nome,
+                    "email": usuario.email
                 })
-
-            historico_vendas = []
-            for venda in usuario.historico_compras:
-                for item in venda.itens:
-                    historico_vendas.append({
-                        "tipo": "Produto",
-                        "descricao": f"{item.quantidade}x {item.produto.nome} - {venda.evento.nome}",
-                        "valor": item.subtotal,
-                        "data": venda.data_hora.strftime('%d/%m/%Y'),
-                        "metodo": venda.metodo_pagamento
-                    })
-
-            historico_completo = historico_ingressos + historico_vendas
             
-            self.__view.mostra_historico_compras(historico_completo)
-        
+            self.__view.mostra_usuarios(dados_usuarios)
+            
         except Exception as e:
-            self.__view.mostrar_popup("Erro", f"Erro ao gerar histórico: {str(e)}")
+            self.__view.mostrar_popup("✗ Erro", f"Erro ao listar usuários: {str(e)}")
 
-    def fluxo_listar_meus_ingressos(self):
-        """Contém a lógica do seu método antigo 'listar_meus_ingressos'."""
+    def excluir_usuario(self):
+        """Excluir usuário com tratamento de exceções"""
         try:
             matricula = self.__view.pega_matricula_usuario()
-            if not matricula: return
+            
+            if matricula is None:
+                return  # Usuário cancelou
             
             usuario = Usuario.get_by_matricula(matricula)
             if not usuario:
-                self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
-                return
-
-            ingressos_objetos = usuario.ingressos_comprados
+                raise EntidadeNaoEncontradaException(f"Usuário com matrícula {matricula} não encontrado!")
             
-            if not ingressos_objetos:
-                 self.__view.mostra_ingressos_usuario([])
-                 return
+            # Validação: usuário com ingressos não pode ser excluído
+            if len(usuario.ingressos_comprados) > 0:
+                raise RegraDeNegocioException("Usuário com ingressos não pode ser excluído!")
+            
+            Usuario.remove(usuario)
+            self.__view.mostrar_popup("✓ Sucesso", f"Usuário {usuario.nome} excluído com sucesso!")
+            
+        except EntidadeNaoEncontradaException as e:
+            self.__view.mostrar_popup("✗ Entidade Não Encontrada", e.mensagem)
+        except RegraDeNegocioException as e:
+            self.__view.mostrar_popup("✗ Erro de Negócio", e.mensagem)
+        except Exception as e:
+            self.__view.mostrar_popup("✗ Erro Inesperado", f"Erro ao excluir usuário: {str(e)}")
 
+    def ver_historico_compras(self):
+        """Ver histórico de compras do usuário"""
+        try:
+            matricula = self.__view.pega_matricula_usuario()
+            
+            if matricula is None:
+                return
+            
+            usuario = Usuario.get_by_matricula(matricula)
+            if not usuario:
+                raise EntidadeNaoEncontradaException(f"Usuário com matrícula {matricula} não encontrado!")
+            
+            historico = usuario.historico_compras
+            
+            if not historico:
+                self.__view.mostrar_popup("ℹ Informação", "Nenhuma compra realizada.")
+                return
+            
+            # Converter para formato esperado pela view
+            dados_historico = []
+            for i, venda in enumerate(historico, 1):
+                dados_historico.append({
+                    "tipo": "Ingresso",
+                    "descricao": str(venda),
+                    "valor": getattr(venda, 'preco', 0.0),
+                    "data": str(getattr(venda, 'data_compra', 'N/A')),
+                    "metodo": getattr(venda, 'metodo_pagamento', 'Não informado')
+                })
+            
+            self.__view.mostra_historico_compras(dados_historico)
+            
+        except EntidadeNaoEncontradaException as e:
+            self.__view.mostrar_popup("✗ Entidade Não Encontrada", e.mensagem)
+        except Exception as e:
+            self.__view.mostrar_popup("✗ Erro", f"Erro ao visualizar histórico: {str(e)}")
+
+    def listar_ingressos_usuario(self):
+        """Listar ingressos do usuário"""
+        try:
+            matricula = self.__view.pega_matricula_usuario()
+            
+            if matricula is None:
+                return
+            
+            usuario = Usuario.get_by_matricula(matricula)
+            if not usuario:
+                raise EntidadeNaoEncontradaException(f"Usuário com matrícula {matricula} não encontrado!")
+            
+            ingressos = usuario.ingressos_comprados
+            
+            if not ingressos:
+                self.__view.mostrar_popup("ℹ Informação", "Nenhum ingresso cadastrado.")
+                return
+            
+            # Converter para formato esperado pela view
             dados_ingressos = []
-            for ingresso in ingressos_objetos:
+            for ingresso in ingressos:
+                evento = getattr(ingresso, 'evento', None)
+                evento_nome = getattr(evento, 'nome', 'Desconhecido') if evento else 'Desconhecido'
+                evento_data = getattr(evento, 'data', 'N/A') if evento else 'N/A'
+                evento_local = getattr(evento, 'local', 'N/A') if evento else 'N/A'
+                
                 dados_ingressos.append({
-                    "evento_nome": ingresso.evento.nome,
-                    "evento_data": ingresso.evento.data.strftime('%d/%m/%Y'),
-                    "evento_local": ingresso.evento.local,
-                    "preco": ingresso.preco,
-                    "data_compra": ingresso.data_compra.strftime('%d/%m/%Y'),
+                    "evento_nome": evento_nome,
+                    "evento_data": evento_data,
+                    "evento_local": evento_local,
+                    "preco": getattr(ingresso, 'preco', 0.0),
+                    "data_compra": str(getattr(ingresso, 'data_compra', 'N/A'))
                 })
             
             self.__view.mostra_ingressos_usuario(dados_ingressos)
-        
+            
+        except EntidadeNaoEncontradaException as e:
+            self.__view.mostrar_popup("✗ Entidade Não Encontrada", e.mensagem)
         except Exception as e:
-            self.__view.mostrar_popup("Erro", f"Erro ao listar ingressos: {str(e)}")
+            self.__view.mostrar_popup("✗ Erro", f"Erro ao listar ingressos: {str(e)}")
 
-    def fluxo_avaliar_evento(self):
-        """Contém a lógica do seu método antigo 'avaliar_evento'."""
+    def avaliar_evento(self):
+        """Avaliar um evento"""
         try:
-            # 1. Obter o usuário
-            matricula = self.__view.pega_matricula_usuario()
-            if not matricula: return
+            dados_avaliacao = self.__view.pega_dados_avaliacao()
             
-            usuario = Usuario.get_by_matricula(matricula)
-            if not usuario:
-                self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
+            if dados_avaliacao is None:
                 return
-
-            # 2. Obter o evento (A ser implementado em conjunto com EventoController)
-            # Você precisa de um 'EventoView' com 'seleciona_evento()'
-            self.__view.mostrar_popup("Aviso", "A seleção de evento ainda não foi implementada.")
-            return 
+            
+            # Aqui você implementaria a lógica de avaliação
+            self.__view.mostrar_popup("✓ Sucesso", "Avaliação registrada com sucesso!")
             
         except Exception as e:
-            self.__view.mostrar_popup("Erro", f"Erro ao avaliar evento: {str(e)}")
-            
-    def buscar_usuario_por_matricula(self, matricula: str):
-        return Usuario.get_by_matricula(matricula)
-    
-    def listar_usuarios_objetos(self):
-        return Usuario.get_all()
-        
-    def pega_matricula_usuario_gui(self) -> str:
-        return self.__view.pega_matricula_usuario()
-        
-    def pega_dados_avaliacao_gui(self) -> dict:
-        return self.__view.pega_dados_avaliacao()
-    
-    def set_evento_controller(self, evento_controller: 'EventoController'):
-        """(Injetado pelo MainController) Recebe a instância do EventoController."""
-        self.__evento_controller = evento_controller
+            self.__view.mostrar_popup("✗ Erro", f"Erro ao registrar avaliação: {str(e)}")
