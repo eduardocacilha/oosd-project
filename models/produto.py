@@ -1,50 +1,48 @@
 from abc import ABC, abstractmethod
+from exceptions.entidadeNaoEncontradaException import EntidadeNaoEncontradaException
+from exceptions.regraDeNegocioException import RegraDeNegocioException
 
 class Produto(ABC):
-    def __init__(self, id_produto: int, nome: str, preco: float, estoque: int):
-        self.__id_produto = id_produto
-        self.__nome = nome
-        self.__preco = float(preco)
-        self.__estoque = int(estoque)
+    def __init__(self, nome: str, preco: float, estoque: int):
 
-    def verificar_estoque(self, quantidade: int):
+        if not nome or not nome.strip():
+            raise RegraDeNegocioException("Nome do produto não pode estar vazio.")
+
+        if not isinstance(preco, (int, float)) or preco < 0:
+            raise RegraDeNegocioException("Preço deve ser um número não negativo.")
+
+        if not isinstance(estoque, int) or estoque < 0:
+            raise RegraDeNegocioException("Estoque deve ser um número inteiro não negativo.")
+
+        self.__nome = nome.strip()
+        self.__preco = float(preco)
+        self.__estoque = estoque
+
+    @property
+    def nome(self) -> str:
+        return self.__nome
+
+    @property
+    def preco(self) -> float:
+        return self.__preco
+
+    @property
+    def estoque(self) -> int:
+        return self.__estoque
+    
+    def verificar_estoque(self, quantidade: int = 1) -> bool:
+        """Verifica se há estoque suficiente"""
         return self.__estoque >= quantidade
 
     def baixar_estoque(self, quantidade: int):
-        if quantidade < 0:
-            raise ValueError("Quantidade negativa")
+        """Reduz o estoque - usado pela classe Venda"""
         if not self.verificar_estoque(quantidade):
-            raise ValueError("Estoque insuficiente")
+            raise RegraDeNegocioException(f"Estoque insuficiente. Disponível: {self.__estoque}")
         self.__estoque -= quantidade
 
     @abstractmethod
-    def descricao(self) -> str:
-        ...
+    def calcular_preco_final(self) -> float:
+        pass
 
-    @property
-    def id_produto(self):
-        return self.__id_produto
-
-    @property
-    def nome(self):
-        return self.__nome
-    
-    @nome.setter
-    def nome(self, value):
-        self.__nome = value
-
-    @property
-    def preco(self):
-        return self.__preco
-
-    @preco.setter
-    def preco(self, value):
-        self.__preco = float(value)
-
-    @property
-    def estoque(self):
-        return self.__estoque
-
-    @estoque.setter
-    def estoque(self, value):
-        self.__estoque = int(value)
+    def __str__(self) -> str:
+        return f"{self.__nome} - R$ {self.__preco:.2f} - Estoque: {self.__estoque}"

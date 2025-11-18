@@ -1,29 +1,29 @@
-try:
-    from .produto import Produto
-except ImportError:
-    from models.produto import Produto
+from .produto import Produto
+from exceptions.regraDeNegocioException import RegraDeNegocioException
 
 class Camisa(Produto):
-    def __init__(self, id_produto: int, nome: str, preco: float, estoque: int = 0, tamanho: str = "M", cor: str = "branca"):
-        super().__init__(id_produto=id_produto, nome=nome, preco=preco, estoque=estoque)
-        self.__tamanho = tamanho
-        self.__cor = cor
+    def __init__(self, nome: str, preco: float, estoque: int, tamanho: str, cor: str):
 
-    def descricao(self):
-        return f"Camisa {self.nome} tam {self.__tamanho} cor {self.__cor}"
+        if not tamanho or not tamanho.strip():
+            raise RegraDeNegocioException("Tamanho da camisa não pode estar vazio.")
+
+        if not cor or not cor.strip():
+            raise RegraDeNegocioException("Cor da camisa não pode estar vazia.")
+
+        super().__init__(nome, preco, estoque)
+        self.__tamanho = tamanho.strip()
+        self.__cor = cor.strip()
+
+    def calcular_preco_final(self) -> float:
+        return self.preco
 
     @property
-    def tamanho(self):
+    def tamanho(self) -> str:
         return self.__tamanho
 
-    @tamanho.setter
-    def tamanho(self, value):
-        self.__tamanho = str(value)
-
     @property
-    def cor(self):
+    def cor(self) -> str:
         return self.__cor
 
-    @cor.setter
-    def cor(self, value):
-        self.__cor = str(value)
+    def __str__(self) -> str:
+        return f"Camisa {self.nome} - {self.__cor} - {self.__tamanho} - R$ {self.preco:.2f} - Estoque: {self.estoque}"

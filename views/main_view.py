@@ -3,7 +3,7 @@ import FreeSimpleGUI as sg
 class MainView:
     def __init__(self):
         sg.theme('Reddit')
-    
+
     def janela_principal(self):
 
         layout = [
@@ -25,7 +25,7 @@ class MainView:
 
     def mostrar_mensagem_encerramento(self):
         sg.Popup('Sistema Encerrado', 'Obrigado por usar nosso sistema!', keep_on_top=True)
-    
-    # O substituto do seu "mosta_mensagem"
+
+
     def mostrar_mensagem(self, titulo, mensagem):
         sg.Popup(titulo, mensagem, keep_on_top=True)

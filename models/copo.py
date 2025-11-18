@@ -1,29 +1,29 @@
-try:
-    from .produto import Produto
-except ImportError:
-    from models.produto import Produto
+from .produto import Produto
+from exceptions.regraDeNegocioException import RegraDeNegocioException
 
 class Copo(Produto):
-    def __init__(self, id_produto: int, nome: str, preco: float, estoque: int, capacidade_ml: int, material: str):
-        super().__init__(id_produto=id_produto, nome=nome, preco=preco, estoque=estoque)
-        self.__capacidade_ml = int(capacidade_ml)
-        self.__material = material
+    def __init__(self, nome: str, preco: float, estoque: int, capacidade_ml: int, material: str):
 
-    def descricao(self):
-        return f"Copo {self.nome} {self.__capacidade_ml}ml {self.__material}"
+        if not isinstance(capacidade_ml, int) or capacidade_ml <= 0:
+            raise RegraDeNegocioException("Capacidade deve ser um número inteiro positivo.")
+
+        if not material or not material.strip():
+            raise RegraDeNegocioException("Material do copo não pode estar vazio.")
+
+        super().__init__(nome, preco, estoque)
+        self.__capacidade_ml = capacidade_ml
+        self.__material = material.strip()
+
+    def calcular_preco_final(self) -> float:
+        return self.preco
 
     @property
-    def capacidade_ml(self):
+    def capacidade_ml(self) -> int:
         return self.__capacidade_ml
 
-    @capacidade_ml.setter
-    def capacidade_ml(self, value):
-        self.__capacidade_ml = int(value)
-
     @property
-    def material(self):
+    def material(self) -> str:
         return self.__material
 
-    @material.setter
-    def material(self, value):
-        self.__material = str(value)
+    def __str__(self) -> str:
+        return f"Copo {self.nome} - {self.__material} - {self.__capacidade_ml}ml - R$ {self.preco:.2f} - Estoque: {self.estoque}"

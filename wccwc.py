@@ -1,13 +1,11 @@
 import json
 import sys
-import traceback 
+import traceback
 from pathlib import Path
 import os
 import s3fs
 
 
-
-# Add the parent directory to the Python path
 sys.path.append(str(Path(__file__).parent.parent))
 from service_essentials.utils.logger import Logger
 from service_essentials.queue_manager.queue_manager_factory import QueueManagerFactory
@@ -15,14 +13,14 @@ from service_essentials.queue_manager.queue_manager_factory import QueueManagerF
 config_trigger = Path(__file__).parent.parent / "sisregCirurgias.json"
 output_queue = "sisregCirurgias_collector"
 
-# criando um mensagem para cada mês e ano fornecido e passando dados da fonte (neste caso, um bucket do S3)
+
 def generate_messages(config_file):
     with open(config_file, 'r') as file:
         config = json.load(file)
 
     year_list = config.get("year", [])
     month_list = config.get("month", [])
-    day_list = config.get("day", [])  
+    day_list = config.get("day", [])
 
     date_list = []
 
@@ -31,7 +29,7 @@ def generate_messages(config_file):
             month_list = range(1, 13)
         for month in month_list:
             if not day_list:
-                day_list = [1] 
+                day_list = [1]
             for day in day_list:
                 date_list.append([year, month, day])
 
@@ -42,7 +40,7 @@ def generate_messages(config_file):
             "bucket": "mpsc",
             "prefix": "teste/",
             "format": ".parquet",
-            "date": f"{year}_{month:02d}_{day:02d}"  
+            "date": f"{year}_{month:02d}_{day:02d}"
         })
 
     return messages
@@ -55,17 +53,17 @@ def gerar_mensagens_dinamicas(url, bucket, prefix, format_ext):
         secret=os.getenv("secret_key")
     )
 
-    # Lista todos os arquivos
+
     arquivos = fs.ls(f"{bucket}/{prefix}")
 
     mensagens = []
     for path in arquivos:
         nome = path.split("/")[-1]
 
-        # Só pega arquivos parquet
+
         if nome.endswith(format_ext):
-            # Extrai a data do nome do arquivo
-            # fat_lista_espera_cirurgia_completa_2025_03_29.parquet
+
+
             data_str = nome.replace("fat_lista_espera_cirurgia_completa_", "").replace(format_ext, "")
 
             mensagens.append({
@@ -78,40 +76,39 @@ def gerar_mensagens_dinamicas(url, bucket, prefix, format_ext):
 
     return mensagens
 
-# Bloco Principal de Execução e tratamento de erros
+
 if __name__ == '__main__':
     print(f"--- INICIANDO TRIGGER ---")
     print(f"Tentando carregar configuração de: {config_trigger}")
     logger = Logger(log_to_console=True)
     try:
-        # Verifica se o arquivo JSON existe antes de tentar abrir
+
         if not config_trigger.is_file():
              print(f"ERRO FATAL: Arquivo de configuração NÃO ENCONTRADO em {config_trigger}")
              sys.exit(1)
 
         messages = generate_messages(config_trigger)
-  
+
 
         if not messages:
             logger.warning(f"Nenhuma mensagem gerada. Verifique '{config_trigger}'.")
             sys.exit(0)
 
         logger.info(f"Geradas {len(messages)} mensagens.")
-        print(f"DEBUG: Mensagens geradas: {messages}") # Veja se as mensagens estão corretas
+        print(f"DEBUG: Mensagens geradas: {messages}")
 
-        # --- Verificação das Variáveis de Ambiente ---
+
         print("\n--- VERIFICANDO VARIÁVEIS RABBITMQ ---")
         print(f"RABBITMQ_HOST: {os.getenv('RABBITMQ_HOST')}")
         print(f"RABBITMQ_USER: {os.getenv('RABBITMQ_USER')}")
-        # NÃO imprima a senha em produção! Apenas para debug local.
-        # print(f"RABBITMQ_PASS: {os.getenv('RABBITMQ_PASS')}")
+
+
         print(f"Output Queue Target: {output_queue}")
         print("-------------------------------------\n")
-        # ---------------------------------------------
 
-        # 2. Conexão com a Fila
+
         print("DEBUG: Tentando obter QueueManager...")
-        queue_manager = None # Inicializa como None
+        queue_manager = None
         try:
             queue_manager = QueueManagerFactory.get_queue_manager()
             print(f"DEBUG: QueueManager obtido: {queue_manager}")
@@ -128,9 +125,9 @@ if __name__ == '__main__':
             print(f"Erro: {e_connect}")
             print(traceback.format_exc())
             print("-------------------------------------------------")
-            sys.exit(1) # Sai se não conseguir conectar/declarar
+            sys.exit(1)
 
-        # 3. Publicação de Mensagens
+
         print("\n--- INICIANDO PUBLICAÇÃO ---")
         for i, message in enumerate(messages):
             try:
@@ -144,15 +141,15 @@ if __name__ == '__main__':
                  print(f"Mensagem: {message}")
                  print(f"Erro: {e_publish}")
                  print(traceback.format_exc())
-                 # Decide se continua para a próxima mensagem ou para
-                 # continue # Para tentar as próximas
-                 break # Para se encontrar um erro de publicação
+
+
+                 break
 
         logger.info("Publicação de mensagens concluída (ou interrompida por erro).")
         print("--- PUBLICAÇÃO CONCLUÍDA (ou interrompida) ---")
 
     except FileNotFoundError:
-        # O print inicial já deve ter pego isso, mas mantém por segurança
+
         logger.error(f"ERRO CRÍTICO: O arquivo '{config_trigger}' não foi encontrado.")
         print(f"ERRO CRÍTICO: Arquivo '{config_trigger}' não encontrado.")
     except Exception as e:
@@ -162,6 +159,4 @@ if __name__ == '__main__':
         print(f"Erro: {e}")
         print(tb_str)
         print("---------------------------------------")
-
-
 
