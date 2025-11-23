@@ -15,6 +15,7 @@ from exceptions.entidadeNaoEncontradaException import EntidadeNaoEncontradaExcep
 from exceptions.regraDeNegocioException import RegraDeNegocioException
 import FreeSimpleGUI as sg
 
+
 class MainController:
 
     def __init__(self):
@@ -25,7 +26,6 @@ class MainController:
             self.__ingresso_view = IngressoView()
             self.__produto_view = ProdutoView()
             self.__relatorio_view = RelatorioView()
-
             self.__usuario_controller = UsuarioController(self.__usuario_view)
             self.__evento_controller = EventoController(self.__evento_view)
             self.__ingresso_controller = IngressoController(self.__ingresso_view)
@@ -34,38 +34,44 @@ class MainController:
                 self.__relatorio_view,
                 self.__evento_controller,
                 self.__usuario_controller,
-                self.__produto_controller
+                self.__produto_controller,
             )
-
-
             try:
-                if hasattr(self.__evento_controller, 'set_usuario_controller'):
-                    self.__evento_controller.set_usuario_controller(self.__usuario_controller)
+                if hasattr(self.__evento_controller, "set_usuario_controller"):
+                    self.__evento_controller.set_usuario_controller(
+                        self.__usuario_controller
+                    )
             except Exception as e:
                 print(f"Erro ao configurar evento_controller: {e}")
-
             try:
-                if hasattr(self.__usuario_controller, 'set_evento_controller'):
-                    self.__usuario_controller.set_evento_controller(self.__evento_controller)
+                if hasattr(self.__usuario_controller, "set_evento_controller"):
+                    self.__usuario_controller.set_evento_controller(
+                        self.__evento_controller
+                    )
             except Exception as e:
                 print(f"Aviso: UsuarioController não tem set_evento_controller: {e}")
-
             try:
-                if hasattr(self.__ingresso_controller, 'set_usuario_controller'):
-                    self.__ingresso_controller.set_usuario_controller(self.__usuario_controller)
-                if hasattr(self.__ingresso_controller, 'set_evento_controller'):
-                    self.__ingresso_controller.set_evento_controller(self.__evento_controller)
+                if hasattr(self.__ingresso_controller, "set_usuario_controller"):
+                    self.__ingresso_controller.set_usuario_controller(
+                        self.__usuario_controller
+                    )
+                if hasattr(self.__ingresso_controller, "set_evento_controller"):
+                    self.__ingresso_controller.set_evento_controller(
+                        self.__evento_controller
+                    )
             except Exception as e:
                 print(f"Erro ao configurar ingresso_controller: {e}")
-
             try:
-                if hasattr(self.__produto_controller, 'set_usuario_controller'):
-                    self.__produto_controller.set_usuario_controller(self.__usuario_controller)
-                if hasattr(self.__produto_controller, 'set_evento_controller'):
-                    self.__produto_controller.set_evento_controller(self.__evento_controller)
+                if hasattr(self.__produto_controller, "set_usuario_controller"):
+                    self.__produto_controller.set_usuario_controller(
+                        self.__usuario_controller
+                    )
+                if hasattr(self.__produto_controller, "set_evento_controller"):
+                    self.__produto_controller.set_evento_controller(
+                        self.__evento_controller
+                    )
             except Exception as e:
                 print(f"Erro ao configurar produto_controller: {e}")
-
         except Exception as e:
             print(f"Erro crítico ao inicializar MainController: {e}")
             raise
@@ -73,50 +79,41 @@ class MainController:
     def iniciar(self):
         try:
             janela_principal = self.__main_view.janela_principal()
-
             while True:
                 try:
                     evento, valores = janela_principal.read()
-
-                    if evento == sg.WINDOW_CLOSED or evento == '0':
+                    if evento == sg.WINDOW_CLOSED or evento == "0":
                         self.__main_view.mostrar_mensagem_encerramento()
                         break
-
-                    elif evento == '1':
+                    elif evento == "1":
                         janela_principal.hide()
                         self.__usuario_controller.rodar_menu_usuario()
                         janela_principal.un_hide()
-
-                    elif evento == '2':
-                         janela_principal.hide()
-                         self.__evento_controller.rodar_menu_evento()
-                         janela_principal.un_hide()
-
-                    elif evento == '3':
-                         janela_principal.hide()
-                         self.__ingresso_controller.rodar_menu_ingresso()
-                         janela_principal.un_hide()
-
-                    elif evento == '4':
+                    elif evento == "2":
+                        janela_principal.hide()
+                        self.__evento_controller.rodar_menu_evento()
+                        janela_principal.un_hide()
+                    elif evento == "3":
+                        janela_principal.hide()
+                        self.__ingresso_controller.rodar_menu_ingresso()
+                        janela_principal.un_hide()
+                    elif evento == "4":
                         janela_principal.hide()
                         self.__produto_controller.rodar_menu_produto()
                         janela_principal.un_hide()
-
-                    elif evento == '5':
+                    elif evento == "5":
                         janela_principal.hide()
                         self.__relatorio_controller.rodar_menu_relatorios()
                         janela_principal.un_hide()
-
                     else:
                         self.__main_view.mostrar_popup("Aviso", "Opção inválida!")
-
                 except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
                     self.__main_view.mostrar_popup("Erro", str(e))
                 except Exception as e:
-                    self.__main_view.mostrar_popup("Erro Inesperado", f"Erro no menu principal: {e}")
-
+                    self.__main_view.mostrar_popup(
+                        "Erro Inesperado", f"Erro no menu principal: {e}"
+                    )
             janela_principal.close()
-
         except Exception as e:
             print(f"Erro crítico na inicialização: {e}")
             sg.popup_error(f"Erro crítico: {e}")
@@ -126,7 +123,6 @@ class MainController:
             while True:
                 try:
                     opcao = self.__usuario_view.tela_opcoes()
-
                     if opcao == 1:
                         self.__usuario_controller.incluir_usuario()
                     elif opcao == 2:
@@ -140,22 +136,28 @@ class MainController:
                     elif opcao == 6:
                         self.__usuario_controller.ver_historico_compras()
                     elif opcao == 7:
-                        if hasattr(self.__evento_controller, 'avaliar_evento'):
+                        if hasattr(self.__evento_controller, "avaliar_evento"):
                             self.__evento_controller.avaliar_evento()
                         else:
-                            self.__usuario_view.mostra_mensagem("Funcionalidade de avaliação não disponível.")
+                            self.__usuario_view.mostra_mensagem(
+                                "Funcionalidade de avaliação não disponível."
+                            )
                     elif opcao == 0:
                         break
                     else:
-                        self.__usuario_view.mostra_mensagem("Opção de usuário inválida.")
-
+                        self.__usuario_view.mostra_mensagem(
+                            "Opção de usuário inválida."
+                        )
                 except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
                     self.__usuario_view.mostra_mensagem(str(e))
                 except Exception as e:
-                    self.__usuario_view.mostra_mensagem(f"Erro no submenu de usuários: {e}")
-
+                    self.__usuario_view.mostra_mensagem(
+                        f"Erro no submenu de usuários: {e}"
+                    )
         except Exception as e:
-            self.__usuario_view.mostra_mensagem(f"Erro crítico no menu de usuários: {e}")
+            self.__usuario_view.mostra_mensagem(
+                f"Erro crítico no menu de usuários: {e}"
+            )
 
     def rodar_submenu_evento(self):
         try:
@@ -177,26 +179,28 @@ class MainController:
                     elif opcao == 0:
                         break
                     else:
-                        self.__evento_view.mostrar_popup("Aviso", "Opção de evento inválida.")
-
+                        self.__evento_view.mostrar_popup(
+                            "Aviso", "Opção de evento inválida."
+                        )
                 except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
                     self.__evento_view.mostrar_popup("Erro", str(e))
                 except Exception as e:
-                    self.__evento_view.mostrar_popup("Erro Inesperado", f"Erro no submenu de eventos: {e}")
-
+                    self.__evento_view.mostrar_popup(
+                        "Erro Inesperado", f"Erro no submenu de eventos: {e}"
+                    )
         except Exception as e:
-            self.__evento_view.mostrar_popup("Erro Crítico", f"Erro crítico no menu de eventos: {e}")
+            self.__evento_view.mostrar_popup(
+                "Erro Crítico", f"Erro crítico no menu de eventos: {e}"
+            )
 
     def rodar_submenu_revenda_ingresso(self):
         try:
             matricula = self.__usuario_view.pega_matricula_usuario()
             if not matricula:
                 return
-
             if not self.__usuario_controller.buscar_usuario_por_matricula(matricula):
-                 self.__usuario_view.mostra_mensagem("Usuário não encontrado.")
-                 return
-
+                self.__usuario_view.mostra_mensagem("Usuário não encontrado.")
+                return
             while True:
                 try:
                     opcao = self.__ingresso_view.tela_opcoes_revenda()
@@ -207,19 +211,25 @@ class MainController:
                     elif opcao == 3:
                         self.__ingresso_controller.comprar_ingresso_revenda(matricula)
                     elif opcao == 4:
-                        self.__ingresso_controller.listar_meus_ingressos_a_venda(matricula)
+                        self.__ingresso_controller.listar_meus_ingressos_a_venda(
+                            matricula
+                        )
                     elif opcao == 0:
                         break
                     else:
-                        self.__ingresso_view.mostra_mensagem("Opção de revenda inválida.")
-
+                        self.__ingresso_view.mostra_mensagem(
+                            "Opção de revenda inválida."
+                        )
                 except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
                     self.__ingresso_view.mostra_mensagem(str(e))
                 except Exception as e:
-                    self.__ingresso_view.mostra_mensagem(f"Erro no submenu de revenda: {e}")
-
+                    self.__ingresso_view.mostra_mensagem(
+                        f"Erro no submenu de revenda: {e}"
+                    )
         except Exception as e:
-            self.__ingresso_view.mostra_mensagem(f"Erro crítico no menu de revenda: {e}")
+            self.__ingresso_view.mostra_mensagem(
+                f"Erro crítico no menu de revenda: {e}"
+            )
 
     def rodar_submenu_produto(self):
         try:
@@ -241,21 +251,23 @@ class MainController:
                     elif opcao == 0:
                         break
                     else:
-                        self.__produto_view.mostrar_popup("Aviso", "Opção de produto inválida.")
-
+                        self.__produto_view.mostrar_popup(
+                            "Aviso", "Opção de produto inválida."
+                        )
                 except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
                     self.__produto_view.mostrar_popup("Erro", str(e))
                 except Exception as e:
-                    self.__produto_view.mostrar_popup("Erro Inesperado", f"Erro no submenu de produtos: {e}")
-
+                    self.__produto_view.mostrar_popup(
+                        "Erro Inesperado", f"Erro no submenu de produtos: {e}"
+                    )
         except Exception as e:
-            self.__produto_view.mostrar_popup("Erro Crítico", f"Erro crítico no menu de produtos: {e}")
+            self.__produto_view.mostrar_popup(
+                "Erro Crítico", f"Erro crítico no menu de produtos: {e}"
+            )
 
     def rodar_submenu_ingresso(self):
         try:
-            
             self.__ingresso_controller.rodar_menu_ingresso()
-
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             print(f"Erro: {e}")
         except Exception as e:
@@ -268,7 +280,6 @@ class MainController:
             while True:
                 try:
                     opcao = self.__relatorio_view.tela_opcoes()
-
                     if opcao == 1:
                         self.__relatorio_controller.rodar_menu_eventos()
                     elif opcao == 2:
@@ -281,11 +292,13 @@ class MainController:
                         break
                     else:
                         self.__relatorio_view.mostra_mensagem("Opção inválida.")
-
                 except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
                     self.__relatorio_view.mostra_mensagem(str(e))
                 except Exception as e:
-                    self.__relatorio_view.mostra_mensagem(f"Erro no submenu de relatórios: {e}")
-
+                    self.__relatorio_view.mostra_mensagem(
+                        f"Erro no submenu de relatórios: {e}"
+                    )
         except Exception as e:
-            self.__relatorio_view.mostra_mensagem(f"Erro crítico no menu de relatórios: {e}")
+            self.__relatorio_view.mostra_mensagem(
+                f"Erro crítico no menu de relatórios: {e}"
+            )

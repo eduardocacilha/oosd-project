@@ -1,15 +1,14 @@
 from .produto import Produto
 from exceptions.regraDeNegocioException import RegraDeNegocioException
 
-class Camisa(Produto):
-    def __init__(self, nome: str, preco: float, estoque: int, tamanho: str, cor: str):
 
+class Camisa(Produto):
+
+    def __init__(self, nome: str, preco: float, estoque: int, tamanho: str, cor: str):
         if not tamanho or not tamanho.strip():
             raise RegraDeNegocioException("Tamanho da camisa não pode estar vazio.")
-
         if not cor or not cor.strip():
             raise RegraDeNegocioException("Cor da camisa não pode estar vazia.")
-
         super().__init__(nome, preco, estoque)
         self.__tamanho = tamanho.strip()
         self.__cor = cor.strip()

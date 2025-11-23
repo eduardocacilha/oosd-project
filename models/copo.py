@@ -1,15 +1,18 @@
 from .produto import Produto
 from exceptions.regraDeNegocioException import RegraDeNegocioException
 
+
 class Copo(Produto):
-    def __init__(self, nome: str, preco: float, estoque: int, capacidade_ml: int, material: str):
 
+    def __init__(
+        self, nome: str, preco: float, estoque: int, capacidade_ml: int, material: str
+    ):
         if not isinstance(capacidade_ml, int) or capacidade_ml <= 0:
-            raise RegraDeNegocioException("Capacidade deve ser um número inteiro positivo.")
-
+            raise RegraDeNegocioException(
+                "Capacidade deve ser um número inteiro positivo."
+            )
         if not material or not material.strip():
             raise RegraDeNegocioException("Material do copo não pode estar vazio.")
-
         super().__init__(nome, preco, estoque)
         self.__capacidade_ml = capacidade_ml
         self.__material = material.strip()

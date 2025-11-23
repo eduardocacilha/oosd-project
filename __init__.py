@@ -9,5 +9,13 @@ from .models.copo import Copo
 from .models.ingresso import Ingresso
 
 __all__ = [
-    'Usuario','Evento','Feedback','Venda','ItemVenda','Produto','Camisa','Copo','Ingresso'
+    "Usuario",
+    "Evento",
+    "Feedback",
+    "Venda",
+    "ItemVenda",
+    "Produto",
+    "Camisa",
+    "Copo",
+    "Ingresso",
 ]

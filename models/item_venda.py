@@ -1,18 +1,20 @@
 from exceptions.entidadeNaoEncontradaException import EntidadeNaoEncontradaException
 from exceptions.regraDeNegocioException import RegraDeNegocioException
 
-class ItemVenda:
-    def __init__(self, produto, quantidade: int, preco_unitario: float):
 
+class ItemVenda:
+
+    def __init__(self, produto, quantidade: int, preco_unitario: float):
         if not produto:
             raise RegraDeNegocioException("Produto não pode ser nulo.")
-
         if not isinstance(quantidade, int) or quantidade <= 0:
-            raise RegraDeNegocioException("Quantidade deve ser um número inteiro positivo.")
-
+            raise RegraDeNegocioException(
+                "Quantidade deve ser um número inteiro positivo."
+            )
         if not isinstance(preco_unitario, (int, float)) or preco_unitario < 0:
-            raise RegraDeNegocioException("Preço unitário deve ser um número não negativo.")
-
+            raise RegraDeNegocioException(
+                "Preço unitário deve ser um número não negativo."
+            )
         self.__produto = produto
         self.__quantidade = quantidade
         self.__preco_unitario = float(preco_unitario)
