@@ -8,8 +8,9 @@ from controllers.usuario_controller import UsuarioController
 from models.camisa import Camisa
 from models.copo import Copo
 from models.venda import Venda
-from models.item_venda import ItemVenda
 from models.produto import Produto
+from DAOs.produto_dao import ProdutoDAO
+from DAOs.venda_dao import VendaDAO
 
 
 class ProdutoController:
@@ -18,8 +19,8 @@ class ProdutoController:
         self.__view = produto_view
         self.__evento_controller: EventoController = None
         self.__usuario_controller: UsuarioController = None
-        self.__produtos_por_evento: Dict[str, List[Produto]] = {}
-        self.__next_produto_id = 1
+        self.__produto_dao = ProdutoDAO()
+        self.__venda_dao = VendaDAO()
 
     def set_usuario_controller(self, usuario_controller: UsuarioController):
         self.__usuario_controller = usuario_controller
@@ -39,10 +40,6 @@ class ProdutoController:
                     self.listar_produtos_evento()
                 elif opcao == 4:
                     self.excluir_produto()
-                elif opcao == 5:
-                    self.registrar_venda()
-                elif opcao == 6:
-                    self.relatorio_vendas()
                 elif opcao == 0:
                     break
             except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
@@ -50,278 +47,162 @@ class ProdutoController:
             except Exception as e:
                 self.__view.mostrar_popup("Erro Inesperado", f"Ocorreu um erro: {e}")
 
-    def _gerar_id_produto(self) -> int:
-        current_id = self.__next_produto_id
-        self.__next_produto_id += 1
-        return current_id
+    def _produtos_do_evento(self, nome_evento: str) -> List[Produto]:
+        return [
+            p
+            for p in self.__produto_dao.get_all()
+            if getattr(p, "evento_nome", None) == nome_evento
+        ]
 
     def adicionar_produto_evento(self):
         try:
-            evento_escolhido = self.__evento_controller.selecionar_evento_gui()
-            if evento_escolhido is None:
+            evento = self.__evento_controller.selecionar_evento_gui()
+            if not evento:
                 return
             tipo = self.__view.escolher_tipo_produto()
             if tipo == 0:
                 return
-            dados = None
             if tipo == 1:
                 dados = self.__view.pega_dados_camisa()
+                if not dados:
+                    return
+                produto = Camisa(
+                    nome=dados["nome"],
+                    preco=dados["preco"],
+                    estoque=dados["estoque"],
+                    tamanho=dados["tamanho"],
+                    cor=dados["cor"],
+                )
             elif tipo == 2:
                 dados = self.__view.pega_dados_copo()
-            else:
-                raise RegraDeNegocioException("Tipo de produto inválido.")
-            if dados is not None:
-                produto = None
-                if tipo == 1:
-                    produto = Camisa(
-                        nome=dados["nome"],
-                        preco=dados["preco"],
-                        estoque=dados["estoque"],
-                        tamanho=dados["tamanho"],
-                        cor=dados["cor"],
-                    )
-                elif tipo == 2:
-                    produto = Copo(
-                        nome=dados["nome"],
-                        preco=dados["preco"],
-                        estoque=dados["estoque"],
-                        capacidade_ml=dados["capacidade_ml"],
-                        material=dados["material"],
-                    )
-                nome_evento = evento_escolhido.nome
-                if nome_evento not in self.__produtos_por_evento:
-                    self.__produtos_por_evento[nome_evento] = []
-                self.__produtos_por_evento[nome_evento].append(produto)
-                self.__view.mostrar_popup(
-                    "Sucesso",
-                    f"Produto '{produto.nome}' adicionado ao evento '{nome_evento}'!",
+                if not dados:
+                    return
+                produto = Copo(
+                    nome=dados["nome"],
+                    preco=dados["preco"],
+                    estoque=dados["estoque"],
+                    capacidade_ml=dados["capacidade_ml"],
+                    material=dados["material"],
                 )
+            else:
+                raise RegraDeNegocioException("Tipo inválido.")
+            setattr(produto, "evento_nome", evento.nome)
+            self.__produto_dao.add(produto)
+            self.__view.mostrar_popup(
+                "Sucesso",
+                f"Produto '{produto.nome}' adicionado ao evento '{evento.nome}'.",
+            )
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostrar_popup("Erro", str(e))
         except Exception as e:
-            self.__view.mostrar_popup(
-                "Erro", f"Erro inesperado ao adicionar produto: {str(e)}"
-            )
+            self.__view.mostrar_popup("Erro", f"Falha ao adicionar produto: {e}")
 
     def listar_produtos_evento(self):
         try:
-            evento_escolhido = self.__evento_controller.selecionar_evento_gui()
-            if evento_escolhido is None:
+            evento = self.__evento_controller.selecionar_evento_gui()
+            if not evento:
                 return
-            nome_evento = evento_escolhido.nome
-            produtos = self.__produtos_por_evento.get(nome_evento, [])
+            produtos = self._produtos_do_evento(evento.nome)
             if not produtos:
-                raise EntidadeNaoEncontradaException(
-                    "Nenhum produto cadastrado para este evento."
-                )
-            dados_produtos = []
-            for produto in produtos:
-                dados_produtos.append(
-                    {
-                        "descricao": str(produto),
-                        "preco": produto.preco,
-                        "estoque": produto.estoque,
-                    }
-                )
-            self.__view.mostra_produtos(dados_produtos)
+                raise EntidadeNaoEncontradaException("Nenhum produto para este evento.")
+            dados = [
+                {"descricao": str(p), "preco": p.preco, "estoque": p.estoque}
+                for p in produtos
+            ]
+            self.__view.mostra_produtos(dados)
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostrar_popup("Erro", str(e))
         except Exception as e:
-            self.__view.mostrar_popup(
-                "Erro", f"Erro inesperado ao listar produtos: {str(e)}"
-            )
-
-    def registrar_venda(self):
-        try:
-            evento_escolhido = self.__evento_controller.selecionar_evento_gui()
-            if evento_escolhido is None:
-                return
-            nome_evento = evento_escolhido.nome
-            produtos = self.__produtos_por_evento.get(nome_evento, [])
-            if not produtos:
-                raise EntidadeNaoEncontradaException(
-                    "Nenhum produto cadastrado para este evento."
-                )
-            matricula = self.__usuario_controller.pega_matricula_usuario_gui()
-            if not matricula:
-                return
-            usuario = self.__usuario_controller.buscar_usuario_por_matricula(matricula)
-            if not usuario:
-                raise EntidadeNaoEncontradaException("Usuário não encontrado.")
-            metodo_pagamento = self.__view.pega_metodo_pagamento()
-            if not metodo_pagamento:
-                return
-            venda = None
-            while True:
-                dados_produtos = []
-                produtos_com_estoque = []
-                for produto in produtos:
-                    if produto.estoque > 0:
-                        dados_produtos.append(
-                            {
-                                "descricao": str(produto),
-                                "preco": produto.preco,
-                                "estoque": produto.estoque,
-                            }
-                        )
-                        produtos_com_estoque.append(produto)
-                if not dados_produtos:
-                    raise EntidadeNaoEncontradaException(
-                        "Nenhum produto com estoque disponível."
-                    )
-                indice_produto = self.__view.seleciona_produto(dados_produtos)
-                if indice_produto is None:
-                    break
-                produto_escolhido = produtos_com_estoque[indice_produto]
-                try:
-                    quantidade = self.__view.pega_quantidade_venda()
-                    if quantidade is None:
-                        continue
-                    if venda is None:
-                        venda = Venda(usuario, evento_escolhido, metodo_pagamento)
-                    venda.adicionar_item(produto_escolhido, quantidade)
-                    self.__view.mostrar_popup(
-                        "Sucesso",
-                        f"Item adicionado: {quantidade}x {produto_escolhido.nome}",
-                    )
-                    if not self.__view.confirma_continuar_comprando():
-                        break
-                except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
-                    self.__view.mostrar_popup("Erro", str(e))
-            if venda is not None and venda.itens:
-                evento_escolhido.registrar_venda(venda)
-                dados_venda = {
-                    "id_venda": venda.id_venda,
-                    "cliente": usuario.nome,
-                    "evento": evento_escolhido.nome,
-                    "total": venda.total,
-                    "metodo": metodo_pagamento,
-                }
-                self.__view.mostra_venda_realizada(dados_venda)
-            else:
-                self.__view.mostrar_popup(
-                    "Aviso", "Venda cancelada pois nenhum item foi adicionado."
-                )
-        except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
-            self.__view.mostrar_popup("Erro", str(e))
-        except Exception as e:
-            self.__view.mostrar_popup(
-                "Erro", f"Erro inesperado ao registrar venda: {str(e)}"
-            )
-
-    def relatorio_vendas(self):
-        try:
-            vendas = Venda.get_all()
-            if not vendas:
-                raise EntidadeNaoEncontradaException("Nenhuma venda encontrada.")
-            dados_vendas = []
-            for venda in vendas:
-                dados_vendas.append(
-                    {
-                        "id_venda": venda.id_venda,
-                        "cliente": venda.usuario.nome,
-                        "evento": venda.evento.nome,
-                        "data": venda.data_hora.strftime("%d/%m/%Y %H:%M"),
-                        "metodo": venda.metodo_pagamento,
-                        "total": venda.total,
-                    }
-                )
-            self.__view.mostra_relatorio_vendas(dados_vendas)
-        except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
-            self.__view.mostrar_popup("Erro", str(e))
-        except Exception as e:
-            self.__view.mostrar_popup(
-                "Erro", f"Erro inesperado ao gerar relatório: {str(e)}"
-            )
+            self.__view.mostrar_popup("Erro", f"Falha ao listar produtos: {e}")
 
     def alterar_produto(self):
         try:
-            evento_escolhido = self.__evento_controller.selecionar_evento_gui()
-            if evento_escolhido is None:
+            evento = self.__evento_controller.selecionar_evento_gui()
+            if not evento:
                 return
-            nome_evento = evento_escolhido.nome
-            produtos = self.__produtos_por_evento.get(nome_evento, [])
+            produtos = self._produtos_do_evento(evento.nome)
             if not produtos:
-                raise EntidadeNaoEncontradaException(
-                    "Nenhum produto cadastrado para este evento."
-                )
-            dados_produtos = []
-            for produto in produtos:
-                dados_produtos.append(
-                    {
-                        "descricao": str(produto),
-                        "preco": produto.preco,
-                        "estoque": produto.estoque,
-                    }
-                )
-            indice_produto = self.__view.seleciona_produto(dados_produtos)
-            if indice_produto is None:
+                raise EntidadeNaoEncontradaException("Nenhum produto.")
+            dados = [
+                {"descricao": str(p), "preco": p.preco, "estoque": p.estoque}
+                for p in produtos
+            ]
+            idx = self.__view.seleciona_produto(dados)
+            if idx is None:
                 return
-            produto_escolhido = produtos[indice_produto]
-            novos_dados = None
-            if isinstance(produto_escolhido, Camisa):
-                novos_dados = self.__view.pega_dados_camisa()
-            elif isinstance(produto_escolhido, Copo):
-                novos_dados = self.__view.pega_dados_copo()
-            if novos_dados is None:
+            produto = produtos[idx]
+            if isinstance(produto, Camisa):
+                novos = self.__view.pega_dados_camisa()
+            elif isinstance(produto, Copo):
+                novos = self.__view.pega_dados_copo()
+            else:
+                novos = None
+            if not novos:
                 return
-            produto_escolhido.nome = novos_dados["nome"]
-            produto_escolhido.preco = novos_dados["preco"]
-            produto_escolhido.estoque = novos_dados["estoque"]
-            if isinstance(produto_escolhido, Camisa):
-                produto_escolhido.tamanho = novos_dados["tamanho"]
-                produto_escolhido.cor = novos_dados["cor"]
-            elif isinstance(produto_escolhido, Copo):
-                produto_escolhido.capacidade_ml = novos_dados["capacidade_ml"]
-                produto_escolhido.material = novos_dados["material"]
-            self.__view.mostrar_popup("Sucesso", "Produto alterado com sucesso!")
+            old_nome = produto.nome
+            produto.nome = novos["nome"]
+            produto.preco = novos["preco"]
+            produto.estoque = novos["estoque"]
+            if isinstance(produto, Camisa):
+                produto.tamanho = novos["tamanho"]
+                produto.cor = novos["cor"]
+            elif isinstance(produto, Copo):
+                produto.capacidade_ml = novos["capacidade_ml"]
+                produto.material = novos["material"]
+            if old_nome != produto.nome:
+                self.__produto_dao.remove(old_nome)
+                self.__produto_dao.add(produto)
+            else:
+                self.__produto_dao.update(produto)
+            self.__view.mostrar_popup("Sucesso", "Produto alterado.")
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostrar_popup("Erro", str(e))
         except Exception as e:
-            self.__view.mostrar_popup(
-                "Erro", f"Erro inesperado ao alterar produto: {str(e)}"
-            )
+            self.__view.mostrar_popup("Erro", f"Falha ao alterar: {e}")
 
     def excluir_produto(self):
         try:
-            evento_escolhido = self.__evento_controller.selecionar_evento_gui()
-            if evento_escolhido is None:
+            evento = self.__evento_controller.selecionar_evento_gui()
+            if not evento:
                 return
-            nome_evento = evento_escolhido.nome
-            produtos = self.__produtos_por_evento.get(nome_evento, [])
+            produtos = self._produtos_do_evento(evento.nome)
             if not produtos:
-                raise EntidadeNaoEncontradaException(
-                    "Nenhum produto cadastrado para este evento."
-                )
-            dados_produtos = []
-            for produto in produtos:
-                dados_produtos.append(
-                    {
-                        "descricao": str(produto),
-                        "preco": produto.preco,
-                        "estoque": produto.estoque,
-                    }
-                )
-            indice_produto = self.__view.seleciona_produto(dados_produtos)
-            if indice_produto is None:
+                raise EntidadeNaoEncontradaException("Nenhum produto.")
+            dados = [
+                {"descricao": str(p), "preco": p.preco, "estoque": p.estoque}
+                for p in produtos
+            ]
+            idx = self.__view.seleciona_produto(dados)
+            if idx is None:
                 return
-            produto_escolhido = produtos[indice_produto]
-            resposta = sg.popup_yes_no(
-                f"Deseja realmente excluir este produto?\n\n{str(produto_escolhido)}",
-                title="Confirmar Exclusão",
-                keep_on_top=True,
-            )
-            if resposta == "Yes":
-                produtos.remove(produto_escolhido)
-                self.__view.mostrar_popup("Sucesso", "Produto excluído com sucesso!")
+            produto = produtos[idx]
+            if (
+                sg.popup_yes_no(
+                    f"Excluir produto?\n\n{str(produto)}", title="Confirmar"
+                )
+                == "Yes"
+            ):
+                self.__produto_dao.remove(produto.nome)
+                self.__view.mostrar_popup("Sucesso", "Produto excluído.")
             else:
-                self.__view.mostrar_popup("Aviso", "Exclusão cancelada.")
+                self.__view.mostrar_popup("Aviso", "Operação cancelada.")
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostrar_popup("Erro", str(e))
         except Exception as e:
-            self.__view.mostrar_popup(
-                "Erro", f"Erro inesperado ao excluir produto: {str(e)}"
-            )
+            self.__view.mostrar_popup("Erro", f"Falha ao excluir: {e}")
 
     def get_produtos_por_evento_lista(self) -> Dict[str, List[Produto]]:
-        return self.__produtos_por_evento
+        agrupado: Dict[str, List[Produto]] = {}
+        for p in self.__produto_dao.get_all():
+            ev = getattr(p, "evento_nome", None)
+            if ev:
+                agrupado.setdefault(ev, []).append(p)
+        return agrupado
+
+    def recarregar_produtos(self):
+        try:
+            from DAOs.produto_dao import ProdutoDAO
+
+            self.__produto_dao = ProdutoDAO()
+        except Exception as e:
+            self.__view.mostrar_popup("Aviso", f"Falha ao recarregar produtos: {e}")

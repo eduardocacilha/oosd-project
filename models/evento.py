@@ -31,6 +31,7 @@ class Evento:
         self.__feedbacks: List[Feedback] = []
         self.__ingressos: List["Ingresso"] = []
         self.__ingressos_vendidos: List["Ingresso"] = []
+        self.__vendas: List["Venda"] = []
         self.id_evento = Evento._next_id
         Evento._next_id += 1
         Evento._registros.append(self)
@@ -80,13 +81,49 @@ class Evento:
             )
         self.__feedbacks.append(feedback)
 
+    def editar_feedback(self, usuario, nova_nota: int, novo_comentario: str):
+
+        # Regras:
+        # Evento precisa já ter ocorrido.
+        # Usuário deve já ter feito um feedback.
+        # Nota deve ser entre 1 e 5.
+        # Comentário não pode ser vazio.
+
+        if self.__data > date.today():
+            raise RegraDeNegocioException(
+                "Só é possível editar feedback de evento que já ocorreu."
+            )
+        if not isinstance(nova_nota, int) or nova_nota < 1 or nova_nota > 5:
+            raise RegraDeNegocioException("Nota deve ser inteiro entre 1 e 5.")
+        if not novo_comentario or not novo_comentario.strip():
+            raise RegraDeNegocioException("Comentário não pode estar vazio.")
+        for fb in self.__feedbacks:
+            if fb.usuario == usuario:
+                fb._Feedback__nota = (
+                    nova_nota  # acesso controlado para evitar recriar objeto
+                )
+                fb._Feedback__comentario = novo_comentario.strip()
+                return fb
+        raise RegraDeNegocioException("Feedback do usuário não encontrado para edição.")
+
+    def remover_feedback(self, usuario):
+        for fb in list(self.__feedbacks):
+            if fb.usuario == usuario:
+                self.__feedbacks.remove(fb)
+                return fb
+        raise RegraDeNegocioException(
+            "Feedback do usuário não encontrado para remoção."
+        )
+
     def registrar_compra_ingresso(self, ingresso: "Ingresso"):
         if not ingresso:
             raise RegraDeNegocioException("Ingresso deve ser uma instância válida.")
         self.__ingressos_vendidos.append(ingresso)
 
     def registrar_venda(self, venda):
-        pass
+        if venda is None:
+            raise RegraDeNegocioException("Venda inválida.")
+        self.__vendas.append(venda)
 
     @property
     def nome(self) -> str:
@@ -115,6 +152,10 @@ class Evento:
     @property
     def ingressos(self) -> List["Ingresso"]:
         return self.__ingressos.copy()
+
+    @property
+    def vendas(self) -> List["Venda"]:
+        return self.__vendas.copy()
 
     @data.setter
     def data(self, nova_data: date):

@@ -3,13 +3,12 @@ from models.usuario import Usuario
 
 
 class UsuarioDAO(DAO):
-
     def __init__(self):
         super().__init__("usuarios.pkl")
 
     def add(self, usuario: Usuario):
         if (
-            usuario is not None
+            usuario
             and isinstance(usuario, Usuario)
             and isinstance(usuario.matricula, str)
         ):
@@ -17,7 +16,7 @@ class UsuarioDAO(DAO):
 
     def update(self, usuario: Usuario):
         if (
-            usuario is not None
+            usuario
             and isinstance(usuario, Usuario)
             and isinstance(usuario.matricula, str)
         ):

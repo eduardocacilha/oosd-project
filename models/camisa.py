@@ -20,9 +20,21 @@ class Camisa(Produto):
     def tamanho(self) -> str:
         return self.__tamanho
 
+    @tamanho.setter
+    def tamanho(self, valor: str):
+        if not isinstance(valor, str) or not valor.strip():
+            raise RegraDeNegocioException("Tamanho da camisa não pode estar vazio.")
+        self.__tamanho = valor.strip()
+
     @property
     def cor(self) -> str:
         return self.__cor
+
+    @cor.setter
+    def cor(self, valor: str):
+        if not isinstance(valor, str) or not valor.strip():
+            raise RegraDeNegocioException("Cor da camisa não pode estar vazia.")
+        self.__cor = valor.strip()
 
     def __str__(self) -> str:
         return f"Camisa {self.nome} - {self.__cor} - {self.__tamanho} - R$ {self.preco:.2f} - Estoque: {self.estoque}"

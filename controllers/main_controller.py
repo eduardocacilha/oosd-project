@@ -4,11 +4,13 @@ from views.evento_view import EventoView
 from views.ingresso_view import IngressoView
 from views.produto_view import ProdutoView
 from views.relatorio_view import RelatorioView
+from views.venda_view import VendaView
 from controllers.usuario_controller import UsuarioController
 from controllers.evento_controller import EventoController
 from controllers.ingresso_controller import IngressoController
 from controllers.produto_controller import ProdutoController
 from controllers.relatorio_controller import RelatorioController
+from controllers.venda_controller import VendaController
 from exceptions.entidadeNaoEncontradaException import EntidadeNaoEncontradaException
 from exceptions.regraDeNegocioException import RegraDeNegocioException
 from exceptions.entidadeNaoEncontradaException import EntidadeNaoEncontradaException
@@ -26,12 +28,19 @@ class MainController:
             self.__ingresso_view = IngressoView()
             self.__produto_view = ProdutoView()
             self.__relatorio_view = RelatorioView()
+            self.__venda_view = VendaView()
             self.__usuario_controller = UsuarioController(self.__usuario_view)
             self.__evento_controller = EventoController(self.__evento_view)
             self.__ingresso_controller = IngressoController(self.__ingresso_view)
             self.__produto_controller = ProdutoController(self.__produto_view)
             self.__relatorio_controller = RelatorioController(
                 self.__relatorio_view,
+                self.__evento_controller,
+                self.__usuario_controller,
+                self.__produto_controller,
+            )
+            self.__venda_controller = VendaController(
+                self.__venda_view,
                 self.__evento_controller,
                 self.__usuario_controller,
                 self.__produto_controller,
@@ -104,6 +113,10 @@ class MainController:
                     elif evento == "5":
                         janela_principal.hide()
                         self.__relatorio_controller.rodar_menu_relatorios()
+                        janela_principal.un_hide()
+                    elif evento == "6":
+                        janela_principal.hide()
+                        self.__venda_controller.rodar_menu_venda()
                         janela_principal.un_hide()
                     else:
                         self.__main_view.mostrar_popup("Aviso", "Opção inválida!")

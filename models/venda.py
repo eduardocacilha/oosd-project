@@ -30,6 +30,11 @@ class Venda:
         self.__itens: List[ItemVenda] = []
         Venda._registros.append(self)
         usuario.adicionar_venda_historico(self)
+        try:
+            if hasattr(evento, "registrar_venda"):
+                evento.registrar_venda(self)
+        except Exception:
+            pass
 
     def adicionar_item(self, produto: Produto, quantidade: int):
         if not produto:

@@ -11,7 +11,7 @@ class ProdutoDAO(DAO):
         if (
             produto is not None
             and isinstance(produto, Produto)
-            and isinstance(produto.nome, int)
+            and isinstance(produto.nome, str)
         ):
             super().add(produto.nome, produto)
 
@@ -19,14 +19,14 @@ class ProdutoDAO(DAO):
         if (
             produto is not None
             and isinstance(produto, Produto)
-            and isinstance(produto.nome, int)
+            and isinstance(produto.nome, str)
         ):
             super().update(produto.nome, produto)
 
-    def get(self, key: int):
-        if isinstance(key, int):
+    def get(self, key: str):
+        if isinstance(key, str):
             return super().get(key)
 
-    def remove(self, key: int):
-        if isinstance(key, int):
+    def remove(self, key: str):
+        if isinstance(key, str):
             return super().remove(key)

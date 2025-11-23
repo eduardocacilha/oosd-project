@@ -3,6 +3,8 @@ from controllers.usuario_controller import UsuarioController
 from controllers.evento_controller import EventoController
 from controllers.ingresso_controller import IngressoController
 from controllers.produto_controller import ProdutoController
+from controllers.venda_controller import VendaController
+from views.venda_view import VendaView
 from views.usuario_view import UsuarioView
 from views.evento_view import EventoView
 from views.ingresso_view import IngressoView
@@ -11,6 +13,22 @@ from exceptions.entidadeNaoEncontradaException import EntidadeNaoEncontradaExcep
 from exceptions.regraDeNegocioException import RegraDeNegocioException
 from datetime import datetime, timedelta
 import time
+import os
+from pathlib import Path
+
+# limpeza opcional de dados persistidos para evitar interferência em testes
+LIMPAR_DADOS_PERSISTIDOS = True
+
+# importar DAOs para persistir alterações feitas diretamente nos modelos
+from DAOs.usuario_dao import UsuarioDAO
+from DAOs.evento_dao import EventoDAO
+from DAOs.ingresso_dao import IngressoDAO
+from DAOs.venda_dao import VendaDAO  # usado possivelmente em futuras expansões
+
+try:
+    from DAOs.produto_dao import ProdutoDAO
+except ImportError:
+    ProdutoDAO = None
 
 
 class TesteSistema:
@@ -20,6 +38,8 @@ class TesteSistema:
             print("=" * 60)
             print("INICIANDO TESTE AUTOMÁTICO DO SISTEMA")
             print("=" * 60)
+            if LIMPAR_DADOS_PERSISTIDOS:
+                self._limpar_dados_persistidos()
             self.usuario_view = UsuarioView()
             self.evento_view = EventoView()
             self.ingresso_view = IngressoView()
@@ -28,6 +48,13 @@ class TesteSistema:
             self.evento_controller = EventoController(self.evento_view)
             self.ingresso_controller = IngressoController(self.ingresso_view)
             self.produto_controller = ProdutoController(self.produto_view)
+            self.venda_view = VendaView()
+            self.venda_controller = VendaController(
+                self.venda_view,
+                self.evento_controller,
+                self.usuario_controller,
+                self.produto_controller,
+            )
             if hasattr(self.ingresso_controller, "set_usuario_controller"):
                 self.ingresso_controller.set_usuario_controller(self.usuario_controller)
             if hasattr(self.ingresso_controller, "set_evento_controller"):
@@ -40,6 +67,41 @@ class TesteSistema:
         except Exception as e:
             print(f"✗ ERRO na inicialização: {e}")
             raise
+
+    # função para remover arquivos .pkl antes de iniciar DAOs
+    def _limpar_dados_persistidos(self):
+        try:
+            # Arquivos .pkl são armazenados na raiz do projeto
+            raiz = Path(__file__).parent
+            removidos = 0
+            for nome in [
+                "usuarios.pkl",
+                "eventos.pkl",
+                "ingressos.pkl",
+                "produtos.pkl",
+                "vendas.pkl",
+            ]:
+                arq = raiz / nome
+                if arq.exists():
+                    try:
+                        os.remove(arq)
+                        removidos += 1
+                    except OSError:
+                        pass
+            print(f"(Limpeza) Removidos {removidos} arquivos .pkl para teste isolado.")
+        except Exception as e:
+            print(f"(Aviso) Falha ao limpar persistência: {e}")
+
+    # persistir ingresso (usuário, evento e ingresso) após compra direta
+    def _persistir_ingresso(self, ingresso):
+        try:
+            IngressoDAO().add(ingresso)
+            if getattr(ingresso, "comprador", None):
+                UsuarioDAO().update(ingresso.comprador)
+            if getattr(ingresso, "evento", None):
+                EventoDAO().update(ingresso.evento)
+        except Exception as e:
+            print(f"(Aviso) Falha ao persistir ingresso: {e}")
 
     def aguardar(self, segundos=1):
         time.sleep(segundos)
@@ -54,22 +116,22 @@ class TesteSistema:
             {"nome": "Pedro Costa", "email": "pedro@email.com", "matricula": "11111"},
             {"nome": "Ana Oliveira", "email": "ana@email.com", "matricula": "22222"},
         ]
+        usuario_dao = UsuarioDAO()
         for i, dados in enumerate(usuarios_dados, 1):
             try:
                 print(f"\n{i}. Criando usuário: {dados['nome']}")
-                if hasattr(self.usuario_controller, "criar_usuario_teste"):
-                    usuario = self.usuario_controller.criar_usuario_teste(dados)
-                else:
-                    from models.usuario import Usuario
-
-                    usuario = Usuario(dados["nome"], dados["email"], dados["matricula"])
-                    if hasattr(self.usuario_controller, "_UsuarioController__usuarios"):
-                        self.usuario_controller._UsuarioController__usuarios.append(
-                            usuario
-                        )
+                matricula_unica = dados["matricula"]
+                while usuario_dao.get(matricula_unica) is not None:
+                    matricula_unica += "X"
+                dados_unicos = {
+                    "nome": dados["nome"],
+                    "email": dados["email"],
+                    "matricula": matricula_unica,
+                }
+                usuario = self.usuario_controller.criar_usuario_teste(dados_unicos)
                 self.usuarios_teste.append(usuario)
                 print(
-                    f"  ✓ Usuário {dados['nome']} criado (Matrícula: {dados['matricula']})"
+                    f"  ✓ Usuário {dados_unicos['nome']} criado (Matrícula: {dados_unicos['matricula']})"
                 )
                 self.aguardar(0.5)
             except Exception as e:
@@ -102,21 +164,21 @@ class TesteSistema:
         eventos_dados = [
             {
                 "nome": "Show de Rock",
-                "data": hoje + timedelta(days=30),
+                "data": (hoje + timedelta(days=30)).date(),  # corrigido para date
                 "data_str": (hoje + timedelta(days=30)).strftime("%d/%m/%Y"),
                 "local": "Estádio Central",
                 "preco_entrada": 80.0,
             },
             {
                 "nome": "Festival de Jazz",
-                "data": hoje + timedelta(days=45),
+                "data": (hoje + timedelta(days=45)).date(),
                 "data_str": (hoje + timedelta(days=45)).strftime("%d/%m/%Y"),
                 "local": "Teatro Municipal",
                 "preco_entrada": 120.0,
             },
             {
                 "nome": "Feira de Tecnologia",
-                "data": hoje + timedelta(days=60),
+                "data": (hoje + timedelta(days=60)).date(),
                 "data_str": (hoje + timedelta(days=60)).strftime("%d/%m/%Y"),
                 "local": "Centro de Convenções",
                 "preco_entrada": 50.0,
@@ -124,34 +186,24 @@ class TesteSistema:
         ]
         for i, dados in enumerate(eventos_dados, 1):
             try:
-                print(
-                    f"\n{i}. Criando evento: {dados['nome']} para {dados['data_str']}"
-                )
-                if hasattr(self.evento_controller, "criar_evento_teste"):
-                    dados_para_teste = {
+                print(f"\n{i}. Criando evento (controller): {dados['nome']} para {dados['data_str']}")
+                evento = self.evento_controller.criar_evento_teste(
+                    {
                         "nome": dados["nome"],
-                        "data": dados["data_str"],
+                        "data": dados["data"],
                         "local": dados["local"],
                         "preco_entrada": dados["preco_entrada"],
                     }
-                    evento = self.evento_controller.criar_evento_teste(dados_para_teste)
-                else:
-                    from models.evento import Evento
-
-                    evento = Evento(
-                        dados["nome"],
-                        dados["data"],
-                        dados["local"],
-                        dados["preco_entrada"],
-                    )
-                    if hasattr(self.evento_controller, "_EventoController__eventos"):
-                        self.evento_controller._EventoController__eventos.append(evento)
+                )
                 self.eventos_teste.append(evento)
-                print(f"  ✓ Evento '{dados['nome']}' criado para {dados['data_str']}")
+                print(f"  ✓ Evento '{evento.nome}' criado")
                 self.aguardar(0.5)
             except Exception as e:
                 print(f"  ✗ Erro ao criar evento {dados['nome']}: {e}")
         try:
+            # Recarregar eventos no controller para refletir aqueles adicionados diretamente via DAO
+            if hasattr(self.evento_controller, "recarregar_eventos"):
+                self.evento_controller.recarregar_eventos()
             print(f"\n4. Testando listagem de eventos...")
             eventos = self.evento_controller.get_eventos_lista()
             print(f"  ✓ Total de eventos cadastrados: {len(eventos)}")
@@ -189,12 +241,20 @@ class TesteSistema:
                 ingresso = usuario.comprar_ingresso(
                     evento, evento.preco_entrada, compra["metodo"]
                 )
+                # Persistir ingresso e atualizações de usuario/evento
+                self._persistir_ingresso(ingresso)
                 print(
                     f"  ✓ Ingresso comprado por R$ {ingresso.preco:.2f} via {compra['metodo']}"
                 )
                 self.aguardar(0.5)
             except Exception as e:
                 print(f"  ✗ Erro na compra {i}: {e}")
+        # Resumo de ingressos persistidos
+        try:
+            total_ingressos_persistidos = len(list(IngressoDAO().get_all()))
+            print(f"\nTotal de ingressos persistidos: {total_ingressos_persistidos}")
+        except Exception as e:
+            print(f"(Aviso) Falha ao consultar ingressos persistidos: {e}")
         try:
             print(f"\n5. Testando listagem de ingressos do primeiro usuário...")
             usuario = self.usuarios_teste[0]
@@ -231,7 +291,15 @@ class TesteSistema:
             )
             self.aguardar()
             print(f"\n2. {usuario2.nome} comprando ingresso de revenda...")
+            # Utiliza método de revenda recém implementado no modelo Usuario
             usuario2.comprar_ingresso_revenda(ingresso_para_revenda)
+            # Atualizar persistência após transferência
+            try:
+                UsuarioDAO().update(usuario1)
+                UsuarioDAO().update(usuario2)
+                IngressoDAO().update(ingresso_para_revenda)
+            except Exception as e:
+                print(f"(Aviso) Falha ao persistir revenda: {e}")
             print(f"  ✓ Ingresso comprado de {usuario1.nome}")
             self.aguardar()
         except Exception as e:
@@ -305,6 +373,13 @@ class TesteSistema:
                                 "estoque": dados["estoque"],
                             },
                         )()
+                # Associar produto ao evento e persistir
+                try:
+                    setattr(produto, "evento_nome", evento.nome)
+                    from DAOs.produto_dao import ProdutoDAO
+                    ProdutoDAO().add(produto)
+                except Exception as e:
+                    print(f"  ⚠ Falha ao persistir produto: {e}")
                 print(f"  ✓ Produto '{dados['nome']}' criado - R$ {dados['preco']:.2f}")
                 self.aguardar(0.5)
             except Exception as e:
@@ -317,41 +392,57 @@ class TesteSistema:
         if not self.usuarios_teste or not self.eventos_teste:
             print("  ✗ Não há dados suficientes para testar vendas")
             return
-        vendas_teste = [
-            {
-                "cliente": self.usuarios_teste[0].nome,
-                "evento_idx": 0,
-                "produto": "Camisa Show Rock",
-                "quantidade": 2,
-                "metodo": "PIX",
-            },
-            {
-                "cliente": (
-                    self.usuarios_teste[1].nome
-                    if len(self.usuarios_teste) > 1
-                    else self.usuarios_teste[0].nome
-                ),
-                "evento_idx": 0,
-                "produto": "Copo Personalizado",
-                "quantidade": 3,
-                "metodo": "Credito",
-            },
-        ]
-        for i, venda in enumerate(vendas_teste, 1):
+        try:
+            # Localizar produtos criados
+            from DAOs.produto_dao import ProdutoDAO
+            produto_dao = ProdutoDAO()
+            produtos = list(produto_dao.get_all())
+            if not produtos:
+                print("  ✗ Nenhum produto disponível para vendas")
+                return
+            usuario = self.usuarios_teste[0]
+            evento = self.eventos_teste[0]
+            itens_venda = []
+            for p in produtos:
+                if p.nome.startswith("Camisa"):
+                    itens_venda.append((p, 2))
+                elif p.nome.startswith("Copo"):
+                    itens_venda.append((p, 3))
+            print("\n1. Criando venda real via controller...")
+            venda = self.venda_controller.criar_venda_teste(
+                usuario, evento, itens_venda, "PIX"
+            )
+            print(
+                f"  ✓ Venda criada ID {venda.id_venda} Total R$ {venda.total:.2f} Itens: {len(venda.itens)}"
+            )
+        except Exception as e:
+            print(f"  ✗ Erro ao criar venda real: {e}")
+
+    def teste_feedback(self):
+        print("\n" + "=" * 40)
+        print("TESTANDO PERSISTÊNCIA DE FEEDBACK")
+        print("=" * 40)
+        if not self.usuarios_teste or not self.eventos_teste:
+            print("  ✗ Sem usuários ou eventos para feedback")
+            return
+        try:
+            usuario = self.usuarios_teste[0]
+            evento = self.eventos_teste[0]
+            # Forçar data do evento para passado para permitir avaliação
             try:
-                print(f"\n{i}. Simulando venda para {venda['cliente']}")
-                total = (
-                    45.0 * venda["quantidade"]
-                    if "Camisa" in venda["produto"]
-                    else 25.0 * venda["quantidade"]
-                )
-                print(
-                    f"  ✓ Venda registrada: {venda['quantidade']}x {venda['produto']} = R$ {total:.2f}"
-                )
-                print(f"    Cliente: {venda['cliente']} | Método: {venda['metodo']}")
-                self.aguardar(0.5)
-            except Exception as e:
-                print(f"  ✗ Erro na venda {i}: {e}")
+                import datetime as _dt
+                evento._Evento__data = _dt.date.today() - _dt.timedelta(days=1)  # bypass setter para teste
+            except Exception:
+                pass
+            from models.feedback import Feedback
+            from DAOs.feedback_dao import FeedbackDAO
+            from datetime import date as _date
+            feedback = Feedback(usuario, evento, 5, "Excelente evento!", _date.today())
+            evento.adicionar_feedback(feedback)
+            FeedbackDAO().add(feedback)
+            print(f"  ✓ Feedback persistido para evento '{evento.nome}'")
+        except Exception as e:
+            print(f"  ✗ Erro ao testar feedback: {e}")
 
     def teste_excecoes(self):
         print("\n" + "=" * 40)
@@ -407,6 +498,8 @@ class TesteSistema:
             self.teste_produtos()
             self.aguardar(1)
             self.teste_vendas()
+            self.aguardar(1)
+            self.teste_feedback()
             self.aguardar(1)
             self.teste_excecoes()
             print("\n" + "=" * 60)

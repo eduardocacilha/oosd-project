@@ -22,13 +22,33 @@ class Produto(ABC):
     def nome(self) -> str:
         return self.__nome
 
+    @nome.setter
+    def nome(self, valor: str):
+        if not isinstance(valor, str) or not valor.strip():
+            raise RegraDeNegocioException("Nome do produto não pode estar vazio.")
+        self.__nome = valor.strip()
+
     @property
     def preco(self) -> float:
         return self.__preco
 
+    @preco.setter
+    def preco(self, valor: float):
+        if not isinstance(valor, (int, float)) or valor < 0:
+            raise RegraDeNegocioException("Preço deve ser um número não negativo.")
+        self.__preco = float(valor)
+
     @property
     def estoque(self) -> int:
         return self.__estoque
+
+    @estoque.setter
+    def estoque(self, valor: int):
+        if not isinstance(valor, int) or valor < 0:
+            raise RegraDeNegocioException(
+                "Estoque deve ser um número inteiro não negativo."
+            )
+        self.__estoque = valor
 
     def verificar_estoque(self, quantidade: int = 1) -> bool:
         return self.__estoque >= quantidade

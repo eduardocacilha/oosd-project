@@ -4,20 +4,17 @@ from controllers.evento_controller import EventoController
 import FreeSimpleGUI as sg
 from exceptions.entidadeNaoEncontradaException import EntidadeNaoEncontradaException
 from exceptions.regraDeNegocioException import RegraDeNegocioException
-from models.usuario import Usuario
-from models.evento import Evento
 from models.ingresso import Ingresso
+from DAOs.ingresso_dao import IngressoDAO
 
 
 class IngressoController:
 
     def __init__(self, ingresso_view: IngressoView):
-        try:
-            self.__view = ingresso_view
-            self.__usuario_controller: UsuarioController = None
-            self.__evento_controller: EventoController = None
-        except Exception as e:
-            print(f"Erro ao inicializar IngressoController: {e}")
+        self.__view = ingresso_view
+        self.__usuario_controller: UsuarioController = None
+        self.__evento_controller: EventoController = None
+        self.__ingresso_dao = IngressoDAO()
 
     def set_usuario_controller(self, usuario_controller: UsuarioController):
         try:
@@ -115,35 +112,36 @@ class IngressoController:
             matricula = self.__view.pega_matricula_comprador()
             if not matricula:
                 return
-            if not matricula.strip():
-                raise RegraDeNegocioException("Matrícula não pode estar vazia.")
             usuario = self.__usuario_controller.buscar_usuario_por_matricula(matricula)
             if not usuario:
                 raise EntidadeNaoEncontradaException("Usuário não encontrado.")
-            eventos = self.__evento_controller.get_eventos_lista()
-            if not eventos:
-                raise EntidadeNaoEncontradaException(
-                    "Nenhum evento disponível para compra."
-                )
-            evento_escolhido = self.__evento_controller.selecionar_evento_gui()
-            if evento_escolhido is None:
+            if not self.__evento_controller.get_eventos_lista():
+                raise EntidadeNaoEncontradaException("Nenhum evento disponível.")
+            evento = self.__evento_controller.selecionar_evento_gui()
+            if not evento:
                 return
-            metodo_pagamento = self.__view.pega_metodo_pagamento()
-            if not metodo_pagamento:
+            metodo = self.__view.pega_metodo_pagamento()
+            if not metodo:
                 return
             dados_compra = {
-                "evento": evento_escolhido.nome,
-                "preco": evento_escolhido.preco_entrada,
-                "metodo_pagamento": metodo_pagamento,
+                "evento": evento.nome,
+                "preco": evento.preco_entrada,
+                "metodo_pagamento": metodo,
             }
             if not self.__view.confirma_compra_ingresso(dados_compra):
                 return
-            ingresso = usuario.comprar_ingresso(
-                evento_escolhido, evento_escolhido.preco_entrada, metodo_pagamento
-            )
-            self.__view.mostra_mensagem(
-                f"Ingresso para '{evento_escolhido.nome}' comprado com sucesso por R$ {ingresso.preco:.2f}!"
-            )
+            ingresso = usuario.comprar_ingresso(evento, evento.preco_entrada, metodo)
+            if isinstance(ingresso, Ingresso):
+                self.__ingresso_dao.add(ingresso)
+                try:
+                    from DAOs.usuario_dao import UsuarioDAO
+                    from DAOs.evento_dao import EventoDAO
+
+                    UsuarioDAO().update(usuario)
+                    EventoDAO().update(evento)
+                except Exception as e:
+                    print(f"Aviso: falha ao atualizar usuario/evento: {e}")
+            self.__view.mostra_mensagem("Ingresso comprado com sucesso!")
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostra_mensagem(str(e))
         except Exception as e:
@@ -160,7 +158,14 @@ class IngressoController:
             )
             if not usuario:
                 raise EntidadeNaoEncontradaException("Usuário não encontrado.")
-            ingressos_objetos = usuario.listar_ingressos()
+            ingressos_objetos = list(usuario.listar_ingressos())
+            if not ingressos_objetos:
+                try:
+                    for ing in self.__ingresso_dao.get_all():
+                        if getattr(ing, "comprador", None) == usuario:
+                            ingressos_objetos.append(ing)
+                except Exception as e:
+                    print(f"Falha ao executar fallback de ingressos: {e}")
             if not ingressos_objetos:
                 raise EntidadeNaoEncontradaException("Você não possui ingressos.")
             dados_para_view = []
@@ -184,211 +189,128 @@ class IngressoController:
 
     def colocar_ingresso_a_venda(self, matricula_usuario: str):
         try:
-            if not matricula_usuario or not matricula_usuario.strip():
-                raise RegraDeNegocioException(
-                    "Matrícula do usuário não pode estar vazia."
-                )
+            if not matricula_usuario:
+                return
             usuario = self.__usuario_controller.buscar_usuario_por_matricula(
                 matricula_usuario
             )
             if not usuario:
                 raise EntidadeNaoEncontradaException("Usuário não encontrado.")
-            ingressos_disponiveis = [
-                ing for ing in usuario.listar_ingressos() if not ing.revendedor
-            ]
-            if not ingressos_disponiveis:
+            disponiveis = [i for i in usuario.listar_ingressos() if not i.revendedor]
+            if not disponiveis:
                 raise EntidadeNaoEncontradaException(
-                    "Você não possui ingressos disponíveis para colocar à venda."
+                    "Nenhum ingresso disponível para venda."
                 )
-            dados_para_view = []
-            for ingresso in ingressos_disponiveis:
-                try:
-                    dados_para_view.append(
-                        self._transformar_ingresso_para_view(ingresso)
-                    )
-                except (RegraDeNegocioException, EntidadeNaoEncontradaException) as e:
-                    print(f"Erro ao processar ingresso: {e}")
-                    continue
-            if not dados_para_view:
-                raise EntidadeNaoEncontradaException(
-                    "Nenhum ingresso válido disponível para venda."
-                )
-            indice_escolhido = self.__view.seleciona_ingresso(dados_para_view)
-            if indice_escolhido is not None:
-                if indice_escolhido < 0 or indice_escolhido >= len(
-                    ingressos_disponiveis
-                ):
-                    raise RegraDeNegocioException("Índice de ingresso inválido.")
-                ingresso_selecionado = ingressos_disponiveis[indice_escolhido]
-                novo_preco = self.__view.pega_novo_preco_revenda()
-                if novo_preco is not None:
-                    try:
-                        usuario.colocar_ingresso_a_venda(
-                            ingresso_selecionado, novo_preco
-                        )
-                        self.__view.mostra_mensagem(
-                            "Ingresso colocado à venda com sucesso!"
-                        )
-                    except ValueError as e:
-                        raise RegraDeNegocioException(
-                            f"Erro ao colocar ingresso à venda: {e}"
-                        )
-                else:
-                    pass
+            dados = [self._transformar_ingresso_para_view(i) for i in disponiveis]
+            idx = self.__view.seleciona_ingresso(dados)
+            if idx is None:
+                return
+            ingresso = disponiveis[idx]
+            novo_preco = self.__view.pega_novo_preco_revenda()
+            if novo_preco is None:
+                return
+            usuario.colocar_ingresso_a_venda(ingresso, novo_preco)
+            self.__ingresso_dao.update(ingresso)
+            self.__view.mostra_mensagem("Ingresso colocado à venda.")
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostra_mensagem(str(e))
         except Exception as e:
-            self.__view.mostra_mensagem(f"Erro ao colocar ingresso à venda: {e}")
+            self.__view.mostra_mensagem(f"Erro: {e}")
 
     def comprar_ingresso_revenda(self, matricula_comprador: str):
         try:
-            if not matricula_comprador or not matricula_comprador.strip():
-                raise RegraDeNegocioException(
-                    "Matrícula do comprador não pode estar vazia."
-                )
+            if not matricula_comprador:
+                return
             comprador = self.__usuario_controller.buscar_usuario_por_matricula(
                 matricula_comprador
             )
             if not comprador:
-                raise EntidadeNaoEncontradaException(
-                    "Usuário comprador não encontrado."
-                )
-            todos_usuarios = self.__usuario_controller.listar_usuarios_objetos()
-            if not todos_usuarios:
-                raise EntidadeNaoEncontradaException(
-                    "Nenhum usuário cadastrado no sistema."
-                )
-            ingressos_revenda_obj = []
-            for u in todos_usuarios:
-                try:
-                    for i in u.ingressos_comprados:
-                        if i.revendedor and i.revendedor != comprador:
-                            ingressos_revenda_obj.append(i)
-                except AttributeError as e:
-                    continue
-            if not ingressos_revenda_obj:
-                raise EntidadeNaoEncontradaException(
-                    "Não há ingressos de revenda disponíveis no momento."
-                )
-            dados_para_view = []
-            for ingresso in ingressos_revenda_obj:
-                try:
-                    dados_para_view.append(
-                        self._transformar_ingresso_para_view(ingresso)
-                    )
-                except (RegraDeNegocioException, EntidadeNaoEncontradaException) as e:
-                    print(f"Erro ao processar ingresso de revenda: {e}")
-                    continue
-            if not dados_para_view:
-                raise EntidadeNaoEncontradaException(
-                    "Nenhum ingresso de revenda válido disponível."
-                )
-            indice_escolhido = self.__view.seleciona_ingresso_revenda(dados_para_view)
-            if indice_escolhido is not None:
-                if indice_escolhido < 0 or indice_escolhido >= len(
-                    ingressos_revenda_obj
-                ):
-                    raise RegraDeNegocioException("Índice de ingresso inválido.")
-                ingresso_a_comprar = ingressos_revenda_obj[indice_escolhido]
-                revendedor = ingresso_a_comprar.revendedor
-                metodo_pagamento = self.__view.pega_metodo_pagamento()
-                if not metodo_pagamento:
-                    return
-                dados_compra = {
-                    "evento": ingresso_a_comprar.evento.nome,
-                    "preco": ingresso_a_comprar.preco,
-                    "metodo_pagamento": metodo_pagamento,
-                }
-                if not self.__view.confirma_compra_ingresso(dados_compra):
-                    return
-                comprador.comprar_ingresso_revenda(ingresso_a_comprar)
-                self.__view.mostra_mensagem(
-                    f"Ingresso comprado de {revendedor.nome} com sucesso!"
-                )
+                raise EntidadeNaoEncontradaException("Comprador não encontrado.")
+            usuarios = self.__usuario_controller.listar_usuarios_objetos()
+            ingressos_revenda = []
+            for u in usuarios:
+                for ing in getattr(u, "ingressos_comprados", []):
+                    if ing.revendedor and ing.revendedor != comprador:
+                        ingressos_revenda.append(ing)
+            if not ingressos_revenda:
+                raise EntidadeNaoEncontradaException("Sem ingressos de revenda.")
+            dados = [self._transformar_ingresso_para_view(i) for i in ingressos_revenda]
+            idx = self.__view.seleciona_ingresso_revenda(dados)
+            if idx is None:
+                return
+            ingresso = ingressos_revenda[idx]
+            metodo = self.__view.pega_metodo_pagamento()
+            if not metodo:
+                return
+            dados_compra = {
+                "evento": ingresso.evento.nome,
+                "preco": ingresso.preco,
+                "metodo_pagamento": metodo,
+            }
+            if not self.__view.confirma_compra_ingresso(dados_compra):
+                return
+            comprador.comprar_ingresso_revenda(ingresso)
+            self.__ingresso_dao.update(ingresso)
+            try:
+                from DAOs.usuario_dao import UsuarioDAO
+
+                UsuarioDAO().update(comprador)
+            except Exception as e:
+                print(f"Aviso: falha ao atualizar comprador na revenda: {e}")
+            self.__view.mostra_mensagem("Revenda concluída.")
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostra_mensagem(str(e))
         except Exception as e:
-            self.__view.mostra_mensagem(f"Ocorreu um erro na compra: {e}")
+            self.__view.mostra_mensagem(f"Erro: {e}")
 
     def remover_ingresso_da_venda(self, matricula_usuario: str):
         try:
-            if not matricula_usuario or not matricula_usuario.strip():
-                raise RegraDeNegocioException(
-                    "Matrícula do usuário não pode estar vazia."
-                )
+            if not matricula_usuario:
+                return
             usuario = self.__usuario_controller.buscar_usuario_por_matricula(
                 matricula_usuario
             )
             if not usuario:
                 raise EntidadeNaoEncontradaException("Usuário não encontrado.")
-            ingressos_a_venda = [
-                ing for ing in usuario.listar_ingressos() if ing.revendedor == usuario
-            ]
-            if not ingressos_a_venda:
-                raise EntidadeNaoEncontradaException(
-                    "Você não possui ingressos à venda."
-                )
-            dados_para_view = []
-            for ingresso in ingressos_a_venda:
-                try:
-                    dados_para_view.append(
-                        self._transformar_ingresso_para_view(ingresso)
-                    )
-                except (RegraDeNegocioException, EntidadeNaoEncontradaException) as e:
-                    print(f"Erro ao processar ingresso: {e}")
-                    continue
-            if not dados_para_view:
-                raise EntidadeNaoEncontradaException("Nenhum ingresso válido à venda.")
-            indice_escolhido = self.__view.seleciona_ingresso(dados_para_view)
-            if indice_escolhido is not None:
-                if indice_escolhido < 0 or indice_escolhido >= len(ingressos_a_venda):
-                    raise RegraDeNegocioException("Índice de ingresso inválido.")
-                ingresso = ingressos_a_venda[indice_escolhido]
-                try:
-                    usuario.remover_ingresso_da_venda(ingresso)
-                    self.__view.mostra_mensagem(
-                        "Ingresso removido da venda com sucesso!"
-                    )
-                except ValueError as e:
-                    raise RegraDeNegocioException(
-                        f"Erro ao remover ingresso da venda: {e}"
-                    )
+            a_venda = [i for i in usuario.listar_ingressos() if i.revendedor == usuario]
+            if not a_venda:
+                raise EntidadeNaoEncontradaException("Sem ingressos à venda.")
+            dados = [self._transformar_ingresso_para_view(i) for i in a_venda]
+            idx = self.__view.seleciona_ingresso(dados)
+            if idx is None:
+                return
+            ingresso = a_venda[idx]
+            usuario.remover_ingresso_da_venda(ingresso)
+            self.__ingresso_dao.update(ingresso)
+            self.__view.mostra_mensagem("Ingresso removido da venda.")
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostra_mensagem(str(e))
         except Exception as e:
-            self.__view.mostra_mensagem(f"Erro ao remover ingresso da venda: {e}")
+            self.__view.mostra_mensagem(f"Erro: {e}")
 
     def listar_meus_ingressos_a_venda(self, matricula_usuario: str):
         try:
-            if not matricula_usuario or not matricula_usuario.strip():
-                raise RegraDeNegocioException(
-                    "Matrícula do usuário não pode estar vazia."
-                )
+            if not matricula_usuario:
+                return
             usuario = self.__usuario_controller.buscar_usuario_por_matricula(
                 matricula_usuario
             )
             if not usuario:
                 raise EntidadeNaoEncontradaException("Usuário não encontrado.")
-            ingressos_a_venda = [
-                ing for ing in usuario.listar_ingressos() if ing.revendedor == usuario
-            ]
-            if not ingressos_a_venda:
-                raise EntidadeNaoEncontradaException(
-                    "Você não possui ingressos à venda."
-                )
-            dados_para_view = []
-            for ingresso in ingressos_a_venda:
-                try:
-                    dados_para_view.append(
-                        self._transformar_ingresso_para_view(ingresso)
-                    )
-                except (RegraDeNegocioException, EntidadeNaoEncontradaException) as e:
-                    print(f"Erro ao processar ingresso: {e}")
-                    continue
-            if not dados_para_view:
-                raise EntidadeNaoEncontradaException("Nenhum ingresso válido à venda.")
-            self.__view.mostra_ingressos(dados_para_view)
+            a_venda = [i for i in usuario.listar_ingressos() if i.revendedor == usuario]
+            if not a_venda:
+                raise EntidadeNaoEncontradaException("Sem ingressos à venda.")
+            dados = [self._transformar_ingresso_para_view(i) for i in a_venda]
+            self.__view.mostra_ingressos(dados)
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostra_mensagem(str(e))
         except Exception as e:
-            self.__view.mostra_mensagem(f"Erro ao listar ingressos à venda: {e}")
+            self.__view.mostra_mensagem(f"Erro: {e}")
+
+    def recarregar_ingressos(self):
+        try:
+            from DAOs.ingresso_dao import IngressoDAO
+
+            self.__ingresso_dao = IngressoDAO()
+        except Exception as e:
+            self.__view.mostra_mensagem(f"Falha ao recarregar ingressos: {e}")

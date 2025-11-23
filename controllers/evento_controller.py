@@ -1,11 +1,12 @@
 import FreeSimpleGUI as sg
 from datetime import datetime, date
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Optional
 from models.evento import Evento
-from models.feedback import Feedback
 from views.evento_view import EventoView
 from exceptions.entidadeNaoEncontradaException import EntidadeNaoEncontradaException
 from exceptions.regraDeNegocioException import RegraDeNegocioException
+from DAOs.evento_dao import EventoDAO
+
 
 if TYPE_CHECKING:
     from controllers.usuario_controller import UsuarioController
@@ -15,8 +16,8 @@ class EventoController:
 
     def __init__(self, evento_view: EventoView):
         self.__view = evento_view
-        self.__usuario_controller: UsuarioController = None
-        self.__eventos: List[Evento] = []
+        self.__usuario_controller: Optional["UsuarioController"] = None
+        self.__evento_dao = EventoDAO()
 
     def set_usuario_controller(self, usuario_controller: "UsuarioController"):
         self.__usuario_controller = usuario_controller
@@ -25,18 +26,19 @@ class EventoController:
         return self.__view
 
     def get_eventos_lista(self) -> List[Evento]:
-        return self.__eventos
+        return list(self.__evento_dao.get_all())
 
     def selecionar_evento_gui(self) -> Evento | None:
+        eventos = self.get_eventos_lista()
         try:
-            if not self.__eventos:
+            if not eventos:
                 raise EntidadeNaoEncontradaException("Nenhum evento cadastrado.")
             dados_para_selecao = [
-                self._transformar_evento_para_view(e) for e in self.__eventos
+                self._transformar_evento_para_view(e) for e in eventos
             ]
             indice_escolhido = self.__view.seleciona_evento(dados_para_selecao)
             if indice_escolhido is not None:
-                return self.__eventos[indice_escolhido]
+                return eventos[indice_escolhido]
             return None
         except EntidadeNaoEncontradaException as e:
             self.__view.mostrar_popup("Erro", str(e))
@@ -79,17 +81,12 @@ class EventoController:
         }
 
     def buscar_evento_por_nome(self, nome: str) -> Evento | None:
-        try:
-            if not nome or not nome.strip():
-                raise RegraDeNegocioException("Nome do evento não pode estar vazio.")
-            for evento in self.__eventos:
-                if evento.nome.lower() == nome.lower():
-                    return evento
-            return None
-        except RegraDeNegocioException:
-            raise
-        except Exception as e:
-            raise RegraDeNegocioException(f"Erro ao buscar evento por nome: {e}")
+        if not nome or not nome.strip():
+            raise RegraDeNegocioException("Nome do evento não pode estar vazio.")
+        for e in self.get_eventos_lista():
+            if e.nome.lower() == nome.lower():
+                return e
+        return None
 
     def incluir_evento(self):
         try:
@@ -118,7 +115,7 @@ class EventoController:
                 local=dados_evento["local"],
                 preco_entrada=dados_evento["preco_entrada"],
             )
-            self.__eventos.append(novo_evento)
+            self.__evento_dao.add(novo_evento)
             self.__view.mostrar_popup("Sucesso", "Evento incluído com sucesso!")
         except RegraDeNegocioException as e:
             self.__view.mostrar_popup("Erro", str(e))
@@ -127,11 +124,10 @@ class EventoController:
 
     def listar_eventos(self):
         try:
-            if not self.__eventos:
+            eventos = self.get_eventos_lista()
+            if not eventos:
                 raise EntidadeNaoEncontradaException("Nenhum evento cadastrado.")
-            dados_para_view = [
-                self._transformar_evento_para_view(e) for e in self.__eventos
-            ]
+            dados_para_view = [self._transformar_evento_para_view(e) for e in eventos]
             self.__view.mostra_eventos(dados_para_view)
         except EntidadeNaoEncontradaException as e:
             self.__view.mostrar_popup("Lista de Eventos", str(e))
@@ -140,15 +136,16 @@ class EventoController:
 
     def ver_detalhes_evento(self):
         try:
-            if not self.__eventos:
+            eventos = self.get_eventos_lista()
+            if not eventos:
                 raise EntidadeNaoEncontradaException("Nenhum evento cadastrado.")
             dados_para_selecao = [
-                self._transformar_evento_para_view(e) for e in self.__eventos
+                self._transformar_evento_para_view(e) for e in eventos
             ]
             indice_escolhido = self.__view.seleciona_evento(dados_para_selecao)
             if indice_escolhido is not None:
-                evento_selecionado = self.__eventos[indice_escolhido]
-                feedbacks = evento_selecionado.feedbacks
+                evento_selecionado = eventos[indice_escolhido]
+                feedbacks = getattr(evento_selecionado, "feedbacks", [])
                 nota_media = None
                 total_avaliacoes = len(feedbacks)
                 if total_avaliacoes > 0:
@@ -159,8 +156,6 @@ class EventoController:
                 dados_detalhados["nota_media"] = nota_media
                 dados_detalhados["total_avaliacoes"] = total_avaliacoes
                 self.__view.mostra_detalhes_evento(dados_detalhados)
-        except EntidadeNaoEncontradaException as e:
-            self.__view.mostrar_popup("Erro", str(e))
         except Exception as e:
             self.__view.mostrar_popup(
                 "Erro Inesperado", f"Erro ao ver detalhes do evento: {e}"
@@ -168,15 +163,16 @@ class EventoController:
 
     def ver_feedbacks_evento(self):
         try:
-            if not self.__eventos:
+            eventos = self.get_eventos_lista()
+            if not eventos:
                 raise EntidadeNaoEncontradaException("Nenhum evento cadastrado.")
             dados_para_selecao = [
-                self._transformar_evento_para_view(e) for e in self.__eventos
+                self._transformar_evento_para_view(e) for e in eventos
             ]
             indice_escolhido = self.__view.seleciona_evento(dados_para_selecao)
             if indice_escolhido is not None:
-                evento_selecionado = self.__eventos[indice_escolhido]
-                feedbacks_objetos = evento_selecionado.feedbacks
+                evento_selecionado = eventos[indice_escolhido]
+                feedbacks_objetos = getattr(evento_selecionado, "feedbacks", [])
                 if not feedbacks_objetos:
                     raise EntidadeNaoEncontradaException(
                         "Nenhum feedback encontrado para este evento."
@@ -199,55 +195,53 @@ class EventoController:
 
     def excluir_evento(self):
         try:
-            if not self.__eventos:
+            eventos = self.get_eventos_lista()
+            if not eventos:
                 raise EntidadeNaoEncontradaException("Nenhum evento cadastrado.")
             dados_para_selecao = [
-                self._transformar_evento_para_view(e) for e in self.__eventos
+                self._transformar_evento_para_view(e) for e in eventos
             ]
             indice_escolhido = self.__view.seleciona_evento(dados_para_selecao)
             if indice_escolhido is not None:
-                evento_a_excluir = self.__eventos[indice_escolhido]
+                evento_a_excluir = eventos[indice_escolhido]
                 if (
                     hasattr(evento_a_excluir, "ingressos_vendidos")
                     and len(evento_a_excluir.ingressos_vendidos) > 0
                 ):
                     raise RegraDeNegocioException(
-                        "Não é possível excluir um evento que já possui ingressos vendidos."
+                        "Não é possível excluir evento com ingressos vendidos."
                     )
                 if evento_a_excluir.data < date.today():
                     raise RegraDeNegocioException(
-                        "Não é possível excluir um evento que já ocorreu."
+                        "Não é possível excluir evento que já ocorreu."
                     )
-                self.__eventos.remove(evento_a_excluir)
+                self.__evento_dao.remove(evento_a_excluir.nome)
                 self.__view.mostrar_popup("Sucesso", "Evento excluído com sucesso!")
-        except EntidadeNaoEncontradaException as e:
-            self.__view.mostrar_popup("Erro", str(e))
-        except RegraDeNegocioException as e:
+        except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostrar_popup("Erro", str(e))
         except Exception as e:
             self.__view.mostrar_popup("Erro Inesperado", f"Erro ao excluir evento: {e}")
 
     def alterar_evento(self):
         try:
-            if not self.__eventos:
+            eventos = self.get_eventos_lista()
+            if not eventos:
                 raise EntidadeNaoEncontradaException("Nenhum evento cadastrado.")
-            dados_para_view = [
-                self._transformar_evento_para_view(e) for e in self.__eventos
-            ]
+            dados_para_view = [self._transformar_evento_para_view(e) for e in eventos]
             indice_escolhido = self.__view.seleciona_evento(dados_para_view)
             if indice_escolhido is None:
                 return
-            evento = self.__eventos[indice_escolhido]
+            evento = eventos[indice_escolhido]
             if evento.data < date.today():
                 raise RegraDeNegocioException(
-                    "Não é possível alterar um evento que já ocorreu."
+                    "Não é possível alterar evento que já ocorreu."
                 )
             if (
                 hasattr(evento, "ingressos_vendidos")
                 and len(evento.ingressos_vendidos) > 0
             ):
                 raise RegraDeNegocioException(
-                    "Não é possível alterar um evento que já possui ingressos vendidos."
+                    "Não é possível alterar evento com ingressos vendidos."
                 )
             self.__view.mostrar_popup(
                 "Alterando Evento", f"Alterando evento: {evento.nome}"
@@ -259,35 +253,62 @@ class EventoController:
                 nova_data = datetime.strptime(novos_dados["data"], "%d/%m/%Y").date()
                 if nova_data < date.today():
                     raise RegraDeNegocioException(
-                        "A nova data do evento não pode ser no passado."
+                        "A nova data não pode ser no passado."
                     )
             except ValueError:
                 raise RegraDeNegocioException(
                     "Formato de data inválido. Use DD/MM/AAAA."
                 )
             if novos_dados["preco_entrada"] < 0:
-                raise RegraDeNegocioException("Preço do evento não pode ser negativo.")
+                raise RegraDeNegocioException("Preço não pode ser negativo.")
             if not novos_dados["local"].strip():
-                raise RegraDeNegocioException("Local do evento não pode estar vazio.")
+                raise RegraDeNegocioException("Local não pode estar vazio.")
             evento.data = nova_data
             evento.local = novos_dados["local"]
             evento.preco_entrada = novos_dados["preco_entrada"]
+            self.__evento_dao.update(evento)
             self.__view.mostrar_popup("Sucesso", "Evento alterado com sucesso!")
-        except EntidadeNaoEncontradaException as e:
-            self.__view.mostrar_popup("Erro", str(e))
-        except RegraDeNegocioException as e:
+        except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostrar_popup("Erro", str(e))
         except Exception as e:
             self.__view.mostrar_popup("Erro Inesperado", f"Erro ao alterar evento: {e}")
 
-    def selecionar_evento_para_avaliacao(self) -> Evento:
-        if not self.__eventos:
-            raise EntidadeNaoEncontradaException("Evento", "Nenhum cadastrado")
-        dados_para_view = [
-            self._transformar_evento_para_view(e) for e in self.__eventos
-        ]
+    def selecionar_evento_para_avaliacao(self) -> Evento | None:
+        eventos = self.get_eventos_lista()
+        if not eventos:
+            raise EntidadeNaoEncontradaException("Nenhum evento cadastrado.")
+        dados_para_view = [self._transformar_evento_para_view(e) for e in eventos]
         indice_escolhido = self.__view.seleciona_evento(dados_para_view)
         if indice_escolhido is None:
             return None
-        evento_escolhido = self.__eventos[indice_escolhido]
-        return evento_escolhido
+        return eventos[indice_escolhido]
+
+    def persistir_evento(self, evento: Evento):
+        try:
+            if evento and isinstance(evento, Evento):
+                self.__evento_dao.update(evento)
+        except Exception:
+            pass
+
+    def recarregar_eventos(self):
+        try:
+            from DAOs.evento_dao import EventoDAO
+
+            self.__evento_dao = EventoDAO()
+        except Exception as e:
+            self.__view.mostrar_popup("Aviso", f"Falha ao recarregar eventos: {e}")
+
+    def criar_evento_teste(self, dados: dict) -> Evento:
+        nome = dados.get("nome")
+        data = dados.get("data")
+        local = dados.get("local")
+        preco = dados.get("preco_entrada")
+        if self.buscar_evento_por_nome(nome):
+            suffix = 1
+            base = nome
+            while self.buscar_evento_por_nome(nome):
+                nome = f"{base}_{suffix}"
+                suffix += 1
+        evento = Evento(nome, data, local, preco)
+        self.__evento_dao.add(evento)
+        return evento

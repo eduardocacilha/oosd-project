@@ -65,6 +65,7 @@ class Usuario:
             self.__ingressos_comprados.append(ingresso)
             if hasattr(evento, "registrar_compra_ingresso"):
                 evento.registrar_compra_ingresso(ingresso)
+            self.__historico_compras.append(ingresso)
             return ingresso
         except RegraDeNegocioException:
             raise
@@ -98,6 +99,57 @@ class Usuario:
         except Exception as e:
             raise RegraDeNegocioException(
                 f"Erro ao remover ingresso da venda: {str(e)}"
+            )
+
+    def comprar_ingresso_revenda(self, ingresso: "Ingresso"):
+        try:
+            from .ingresso import Ingresso  # evitar import circular em topo
+
+            if not isinstance(ingresso, Ingresso):
+                raise RegraDeNegocioException("Ingresso inválido para revenda")
+            revendedor = ingresso.revendedor
+            if revendedor is None:
+                raise RegraDeNegocioException("Ingresso não está em revenda")
+            if revendedor == self:
+                raise RegraDeNegocioException(
+                    "Você já é o comprador atual deste ingresso"
+                )
+            try:
+                if ingresso in revendedor.ingressos_comprados:
+                    revendedor.ingressos_comprados.remove(ingresso)
+                else:
+                    priv = getattr(revendedor, "_Usuario__ingressos_comprados", None)
+                    if priv is not None and ingresso in priv:
+                        priv.remove(ingresso)
+            except Exception:
+                pass
+            ingresso.comprador = self
+            ingresso.revendedor = None
+            if ingresso not in self.ingressos_comprados:
+                try:
+                    self.ingressos_comprados.append(ingresso)
+                except AttributeError:
+                    priv_self = getattr(self, "_Usuario__ingressos_comprados", None)
+                    if priv_self is not None and ingresso not in priv_self:
+                        priv_self.append(ingresso)
+            try:
+                self.__historico_compras.append(ingresso)
+                rev_hist = getattr(revendedor, "_Usuario__historico_compras", None)
+                if rev_hist is not None:
+                    rev_hist.append(
+                        {
+                            "tipo": "REVENDIDO",
+                            "preco": ingresso.preco,
+                            "ingresso": ingresso,
+                        }
+                    )
+            except Exception:
+                pass
+        except RegraDeNegocioException:
+            raise
+        except Exception as e:
+            raise RegraDeNegocioException(
+                f"Erro ao concluir compra de revenda: {str(e)}"
             )
 
     def adicionar_venda_historico(self, venda: Venda):

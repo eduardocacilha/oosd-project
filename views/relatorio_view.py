@@ -58,7 +58,6 @@ class RelatorioView:
                 [sg.Button("Eventos Mais Caros e Mais Baratos", key=1, size=(30, 1))],
                 [sg.Button("Eventos com Melhores Avaliacoes", key=2, size=(30, 1))],
                 [sg.Button("Eventos com Mais Ingressos Vendidos", key=3, size=(30, 1))],
-                [sg.Button("Ranking Completo de Eventos", key=4, size=(30, 1))],
                 [
                     sg.Button(
                         "Voltar", key=0, size=(30, 1), button_color=("white", "red")
@@ -366,75 +365,6 @@ class RelatorioView:
             janela.close()
         except Exception as e:
             self.mostra_mensagem(f"Erro ao exibir relatório de vendas: {e}")
-
-    def mostra_ranking_eventos(self, eventos: List[dict]):
-        try:
-            if not eventos or not isinstance(eventos, list):
-                self.mostra_mensagem("Nenhum evento cadastrado.")
-                return
-            headings = [
-                "#",
-                "Nome",
-                "Nota",
-                "Ingressos",
-                "Faturamento (R$)",
-                "Data",
-                "Local",
-                "Preço (R$)",
-            ]
-            dados_tabela = []
-            for i, evento in enumerate(eventos, 1):
-                try:
-                    nota_media = float(evento.get("nota_media", 0))
-                    nota_str = f"{nota_media:.1f}" if nota_media > 0 else "N/A"
-                    dados_tabela.append(
-                        [
-                            i,
-                            str(evento.get("nome", "N/A")),
-                            nota_str,
-                            int(evento.get("ingressos_vendidos", 0)),
-                            f"{float(evento.get('faturamento', 0)):.2f}",
-                            str(evento.get("data", "N/A")),
-                            str(evento.get("local", "N/A")),
-                            f"{float(evento.get('preco', 0)):.2f}",
-                        ]
-                    )
-                except (ValueError, TypeError, KeyError) as e:
-                    dados_tabela.append(
-                        [i, "Erro nos dados", str(e), "", "", "", "", ""]
-                    )
-            layout = [
-                [
-                    sg.Text(
-                        "======== RANKING COMPLETO DE EVENTOS ========",
-                        font=("Helvetica", 14, "bold"),
-                    )
-                ],
-                [
-                    sg.Table(
-                        values=dados_tabela,
-                        headings=headings,
-                        auto_size_columns=True,
-                        justification="left",
-                        num_rows=min(len(dados_tabela), 15),
-                        key="-TABLE-",
-                        expand_x=True,
-                        expand_y=True,
-                    )
-                ],
-                [sg.Button("Fechar")],
-            ]
-            janela = sg.Window(
-                "Relatório: Ranking de Eventos",
-                layout,
-                resizable=True,
-                modal=True,
-                finalize=True,
-            )
-            janela.read()
-            janela.close()
-        except Exception as e:
-            self.mostra_mensagem(f"Erro ao exibir ranking de eventos: {e}")
 
     def mostra_produtos_preco(self, mais_caros: List[dict], mais_baratos: List[dict]):
         try:

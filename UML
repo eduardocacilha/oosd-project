@@ -1,15 +1,12 @@
 @startuml
-' Título do Diagrama
-title Diagrama de Classes Completo - Sistema de Festas MVC
+title Diagrama de Classes - Sistema de Festas MVC
 
-' Parâmetros para um visual limpo e profissional
 skinparam shadowing false
 skinparam packageStyle rectangle
 skinparam classAttributeIconSize 0
 skinparam defaultFontName Segoe UI
 skinparam roundCorner 10
 
-' =============== CAMADA DE VIEWS ===============
 package "Views" {
     class MainView {
         + __init__()
@@ -17,175 +14,250 @@ package "Views" {
     }
     class UsuarioView {
         + __init__()
-        + tela_opcoes()
-        + pega_dados_usuario()
+        + menu_usuario()
+        + pega_dados_usuario(pedindo_matricula: bool)
+        + pega_matricula_usuario()
+        + lista_usuarios(dados: List<dict>)
     }
     class EventoView {
         + __init__()
-        + tela_opcoes()
+        + menu_evento()
         + pega_dados_evento()
+        + seleciona_evento(lista: List<dict>) : int?
+        + lista_eventos(lista: List<dict>)
+        + detalhes_evento(dados: dict)
+        + lista_feedbacks(lista: List<dict>)
     }
     class IngressoView {
         + __init__()
-        + tela_opcoes()
-        + seleciona_ingresso()
+        + menu_ingresso()
+        + menu_revenda()
+        + pega_matricula_comprador()
+        + pega_metodo_pagamento()
+        + seleciona_ingresso(lista: List<dict>) : int?
+        + lista_ingressos_usuario(lista: List<dict>)
+        + lista_ingressos_revenda(lista: List<dict>)
+        + pega_novo_preco_revenda()
     }
     class ProdutoView {
         + __init__()
         + tela_opcoes()
-        + pega_tipo_produto()
-        + pega_dados_produto()
+        + escolher_tipo_produto() : int
+        + pega_dados_camisa() : dict
+        + pega_dados_copo() : dict
+        + mostra_produtos(lista: List<dict>)
+        + seleciona_produto(lista: List<dict>) : int?
+        + msg(texto: str)
     }
     class RelatorioView {
         + __init__()
-        + tela_opcoes()
-        + exibir_relatorio_vendas(relatorio)
+        + menu_relatorio()
+        + exibir_relatorio_vendas(lista: List<dict>)
+        + exibir_relatorio_ingressos(lista: List<dict>)
     }
 }
 
-' =============== CAMADA DE CONTROLLERS ===============
 package "Controllers" {
     class MainController {
-        + usuario_controller: UsuarioController
-        + evento_controller: EventoController
-        + produto_controller: ProdutoController
-        + relatorio_controller: RelatorioController
         + __init__()
         + iniciar()
+        - usuario_controller: UsuarioController
+        - evento_controller: EventoController
+        - ingresso_controller: IngressoController
+        - produto_controller: ProdutoController
+        - relatorio_controller: RelatorioController
     }
+
     class UsuarioController {
-        - __usuarios: List<Usuario>
-        + __init__()
-        + incluir_usuario(dados)
-        + buscar_usuario_por_matricula(matricula)
+        + __init__(view: UsuarioView)
+        + rodar_menu_usuario()
+        + incluir_usuario()
+        + alterar_usuario()
+        + excluir_usuario()
+        + listar_usuarios()
+        + listar_ingressos_usuario()
+        + buscar_usuario_por_matricula(matricula: str) : Usuario?
+        + atualizar_usuario(usuario: Usuario)
     }
+
     class EventoController {
-        - __eventos: List<Evento>
-        + __init__()
-        + adicionar_evento(dados)
+        + __init__(view: EventoView)
+        + rodar_menu_evento()
+        + incluir_evento()
+        + alterar_evento()
+        + excluir_evento()
         + listar_eventos()
+        + ver_detalhes()
+        + ver_feedbacks()
+        + selecionar_evento_gui() : Evento?
+        + recarregar_eventos()
     }
+
     class IngressoController {
-        + __init__()
-        + comprar_ingresso(usuario, evento)
-        + colocar_ingresso_a_venda(usuario, ingresso)
+        + __init__(view: IngressoView)
+        + rodar_menu_ingresso()
+        + rodar_menu_revenda()
+        + comprar_ingresso_de_evento()
+        + listar_meus_ingressos()
+        + colocar_ingresso_a_venda()
+        + listar_meus_ingressos_a_venda()
+        + comprar_ingresso_revenda()
+        + remover_ingresso_da_venda()
     }
+
     class ProdutoController {
-        + __init__()
-        + adicionar_produto_a_evento(evento)
-        + registrar_venda(evento, carrinho)
+        + __init__(view: ProdutoView)
+        + rodar_menu_produto()
+        + adicionar_produto_evento()
+        + listar_produtos_evento()
+        + alterar_produto()
+        + excluir_produto()
+        + get_produtos_por_evento_lista() : Dict<str, List<Produto>>
     }
+
     class RelatorioController {
-        + __init__()
-        + gerar_relatorio_vendas(evento)
+        + __init__(view: RelatorioView)
+        + rodar_menu_relatorio()
+        + relatorio_vendas()
+        + relatorio_ingressos()
     }
 }
 
+package "DAOs" {
+    class UsuarioDAO {
+        + __init__()
+        + add(usuario: Usuario)
+        + update(usuario: Usuario)
+        + get(matricula: str) : Usuario?
+        + remove(matricula: str)
+        + get_all() : Iterable<Usuario>
+    }
+    class EventoDAO {
+        + __init__()
+        + add(evento: Evento)
+        + update(evento: Evento)
+        + get(nome: str) : Evento?
+        + remove(nome: str)
+        + get_all() : Iterable<Evento>
+    }
+    class IngressoDAO {
+        + __init__()
+        + add(ingresso: Ingresso)
+        + update(ingresso: Ingresso)
+        + get(id_ingresso: int) : Ingresso?
+        + remove(id_ingresso: int)
+        + get_all() : Iterable<Ingresso>
+    }
+    class ProdutoDAO {
+        + __init__()
+        + add(produto: Produto)
+        + update(produto: Produto)
+        + get(nome: str) : Produto?
+        + remove(nome: str)
+        + get_all() : Iterable<Produto>
+    }
+    class VendaDAO {
+        + __init__()
+        + add(venda: Venda)
+        + update(venda: Venda)
+        + get(id_venda: int) : Venda?
+        + remove(id_venda: int)
+        + get_all() : Iterable<Venda>
+    }
+    ' FeedbackDAO removido do fluxo (CRUD não exposto). Se ainda existir internamente, pode ser reinserido.
+}
 
-' =============== CAMADA DE MODELS ===============
 package "Models" {
-    ' --- Entidades Principais ---
     class Usuario {
         - matricula: str
         - nome: str
-        + __init__(matricula, nome, email)
-        + comprar_ingresso(evento)
+        - email: str
+        - ingressos_comprados: List<Ingresso>
+        - historico_compras: List<Venda>
+        + __init__(matricula: str, nome: str, email: str)
+        + comprar_ingresso(evento: Evento, preco: float, metodo: str) : Ingresso
+        + colocar_ingresso_a_venda(ingresso: Ingresso, novo_preco: float)
+        + listar_ingressos() : List<Ingresso>
+        + comprar_ingresso_revenda(ingresso: Ingresso)
     }
+
     class Evento {
         - nome: str
-        - data: str
-        - produtos: List<Produto>
-        - vendas: List<Venda>
-        + __init__(nome, data, local)
-        + adicionar_produto(produto)
+        - data: date
+        - local: str
+        - preco_entrada: float
+        - ingressos_vendidos: List<Ingresso>
+        - feedbacks: List<Feedback>
+        + __init__(nome: str, data: date, local: str, preco_entrada: float)
+        + registrar_ingresso(ingresso: Ingresso)
     }
+
     class Ingresso {
-        + evento: Evento
-        + comprador: Usuario
-        + __init__(evento, comprador, data)
+        - id_ingresso: int
+        - evento: Evento
+        - comprador: Usuario
+        - revendedor: Usuario?
+        - data_compra: date
+        - preco: float
+        - metodo_pagamento: str
+        + __init__(evento: Evento, comprador: Usuario, preco: float, metodo_pagamento: str)
     }
+
     class Venda {
-        - data_hora: DateTime
+        - id_venda: int
+        - usuario: Usuario
+        - evento: Evento
+        - metodo_pagamento: str
         - itens: List<ItemVenda>
-        + __init__(usuario: 'Usuario', evento: 'Evento', metodo_pagamento: str)
-        + adicionar_item(produto, qtd)
+        - total: float
+        - data_hora: datetime
+        + __init__(usuario: Usuario, evento: Evento, metodo_pagamento: str)
+        + adicionar_item(produto: Produto, quantidade: int)
     }
+
     class ItemVenda {
         - produto: Produto
         - quantidade: int
-        + __init__(produto, qtd)
-    }
-    class Feedback {
-        - nota: int
-        - comentario: str
-        + __init__(usuario, evento, nota)
+        + __init__(produto: Produto, quantidade: int)
     }
 
-    ' --- Hierarquia de Produto ---
+    class Feedback {
+        - usuario: Usuario
+        - evento: Evento
+        - nota: int
+        - comentario: str
+        - data: date
+        + __init__(usuario: Usuario, evento: Evento, nota: int, comentario: str)
+    }
+
     abstract class Produto {
-        - id_produto: int
         - nome: str
         - preco: float
-        + __init__(id, nome, preco, estoque)
-        + {abstract} descricao()
+        - estoque: int
+        - evento_nome: str
+        + __init__(nome: str, preco: float, estoque: int)
+        + calcular_preco_final() : float
+        + __str__() : str
     }
+
     class Camisa extends Produto {
         - tamanho: str
         - cor: str
-        + __init__(id_produto: int, nome: str, preco: float, estoque: int = 0, tamanho: str = "M", cor: str = "branca")
-        + descricao()
+        + __init__(nome: str, preco: float, estoque: int, tamanho: str, cor: str)
+        + calcular_preco_final() : float
     }
+
     class Copo extends Produto {
         - capacidade_ml: int
-        + __init__(id_produto: int, nome: str, preco: float, estoque: int, capacidade_ml: int, material: str)
-        + descricao()
+        - material: str
+        + __init__(nome: str, preco: float, estoque: int, capacidade_ml: int, material: str)
+        + calcular_preco_final() : float
     }
-    
-    ' ========== RELACIONAMENTOS DO MODEL (Corrigidos) ==========
-
-
-    ' --- 2. Composição ---
-    ' (Uma Venda CONTÉM 1 ou mais ItensVenda)
-    Venda "1" *-- "1..*" ItemVenda : contém >
-    
-    ' --- 3. Agregação ---
-    ' (Um Evento OFERECE 0 ou mais Produtos)
-    Evento "1" o-- "0..*" Produto : oferece >
-    
-    ' --- 4. Associações (O que faltava) ---
-    
-    ' Usuário <-> Venda
-    ' (Um Usuário FAZ 0 ou mais Vendas)
-    Usuario "1" --> "0..*" Venda : faz >
-    
-    ' Usuário <-> Feedback
-    ' (Um Usuário ESCREVE 0 ou mais Feedbacks)
-    Usuario "1" --> "0..*" Feedback : escreve >
-    
-    ' Evento <-> Feedback
-    ' (Um Evento RECEBE 0 ou mais Feedbacks)
-    Evento "1" --> "0..*" Feedback : < recebe
-    
-    ' Evento <-> Ingresso
-    ' (Um Evento EMITE 0 ou mais Ingressos)
-    Evento "1" --> "0..*" Ingresso : emite >
-    
-    ' Ingresso <-> Usuario (Comprador)
-    ' (Um Ingresso tem 1 Comprador)
-    Ingresso "1" --> "1" Usuario : comprador
-    
-    ' Ingresso <-> Usuario (Revendedor)
-    ' (Um Ingresso tem 0 ou 1 Revendedor)
-    Ingresso "1" --> "0..1" Usuario : revendedor
-    
-    ' ItemVenda <-> Produto
-    ' (Um ItemVenda REFERE-SE A 1 Produto)
-    ItemVenda "1" --> "1" Produto : refere-se a
 }
 
-' ========== RELACIONAMENTOS DO PADRÃO MVC ==========
+' ================= RELACIONAMENTOS =================
 
-' --- A View depende do seu Controller ---
+' Views -> Controllers
 MainView ..> MainController
 UsuarioView ..> UsuarioController
 EventoView ..> EventoController
@@ -193,20 +265,23 @@ IngressoView ..> IngressoController
 ProdutoView ..> ProdutoController
 RelatorioView ..> RelatorioController
 
-' --- O Controller depende do seu Model ---
-UsuarioController ..> Usuario
-EventoController ..> Evento
-IngressoController ..> Ingresso
-ProdutoController ..> Produto
-ProdutoController ..> Venda
-RelatorioController ..> Venda
-RelatorioController ..> Ingresso
-RelatorioController ..> Evento
-Usuario --> Venda
-Evento --> Ingresso
-Produto --> ItemVenda
+' Controllers -> DAOs
+UsuarioController ..> UsuarioDAO
+EventoController ..> EventoDAO
+IngressoController ..> IngressoDAO
+ProdutoController ..> ProdutoDAO
+RelatorioController ..> VendaDAO
+RelatorioController ..> IngressoDAO
+RelatorioController ..> EventoDAO
 
-' --- Controllers conversam entre si (Injeção de Dependência) ---
+' DAOs -> Models
+UsuarioDAO ..> Usuario
+EventoDAO ..> Evento
+IngressoDAO ..> Ingresso
+ProdutoDAO ..> Produto
+VendaDAO ..> Venda
+
+' Controllers cross dependencies (injeção)
 MainController ..> UsuarioController
 MainController ..> EventoController
 MainController ..> IngressoController
@@ -219,5 +294,16 @@ ProdutoController ..> EventoController
 RelatorioController ..> UsuarioController
 RelatorioController ..> EventoController
 RelatorioController ..> ProdutoController
+
+' Model relations
+Evento "1" --> "0..*" Ingresso : emite
+Usuario "1" --> "0..*" Ingresso : possui
+Usuario "1" --> "0..*" Venda : realiza
+Venda "1" *-- "1..*" ItemVenda : contém
+ItemVenda "1" --> "1" Produto : produto
+Evento "1" o-- "0..*" Produto : oferece
+Evento "1" --> "0..*" Feedback : recebe
+Usuario "1" --> "0..*" Feedback : escreve
+Ingresso "0..*" --> "0..1" Usuario : revendedor
 
 @enduml

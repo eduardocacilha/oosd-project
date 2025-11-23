@@ -33,8 +33,6 @@ class ProdutoView:
                 [sg.Button("Alterar Produto", key=2, size=(30, 1))],
                 [sg.Button("Listar Produtos de um Evento", key=3, size=(30, 1))],
                 [sg.Button("Excluir Produto", key=4, size=(30, 1))],
-                [sg.Button("Registrar Venda", key=5, size=(30, 1))],
-                [sg.Button("Relatório de Vendas", key=6, size=(30, 1))],
                 [
                     sg.Button(
                         "Retornar ao Menu Principal",
@@ -396,200 +394,16 @@ class ProdutoView:
             return None
 
     def pega_quantidade_venda(self) -> Optional[int]:
-        try:
-            layout = [
-                [sg.Text("Digite a quantidade:")],
-                [sg.Input(key="-QTD-", size=(10, 1))],
-                [sg.Button("OK", key="1"), sg.Button("Cancelar", key="2")],
-            ]
-            janela = sg.Window("Quantidade", layout, modal=True, finalize=True)
-            while True:
-                evento, valores = janela.read()
-                if evento == sg.WINDOW_CLOSED or evento == "2":
-                    janela.close()
-                    return None
-                if evento == "1":
-                    try:
-                        qtd_str = valores["-QTD-"].strip()
-                        if not qtd_str:
-                            raise RegraDeNegocioException(
-                                "Quantidade não pode estar vazia."
-                            )
-                        try:
-                            qtd_int = int(qtd_str)
-                            if qtd_int <= 0:
-                                raise RegraDeNegocioException(
-                                    "Quantidade deve ser maior que zero."
-                                )
-                            janela.close()
-                            return qtd_int
-                        except ValueError:
-                            raise RegraDeNegocioException(
-                                "Quantidade inválida. Digite um número inteiro."
-                            )
-                    except (
-                        RegraDeNegocioException,
-                        EntidadeNaoEncontradaException,
-                    ) as e:
-                        self.mostrar_popup("Erro de Validação", str(e))
-                        continue
-                    except Exception as e:
-                        self.mostrar_popup(
-                            "Erro Inesperado", f"Erro ao validar quantidade: {e}"
-                        )
-                        continue
-        except Exception as e:
-            self.mostrar_popup("Erro", f"Erro ao coletar quantidade: {e}")
-            return None
+        return None
 
     def pega_metodo_pagamento(self) -> str:
-        try:
-            layout = [
-                [
-                    sg.Text(
-                        "\n-------- MÉTODO DE PAGAMENTO ----------",
-                        font=("Helvetica", 14, "bold"),
-                    )
-                ],
-                [sg.Button("Dinheiro", key=1, size=(20, 1))],
-                [sg.Button("PIX", key=2, size=(20, 1))],
-                [sg.Button("Débito", key=3, size=(20, 1))],
-                [sg.Button("Crédito", key=4, size=(20, 1))],
-            ]
-            janela = sg.Window("Método de Pagamento", layout, modal=True, finalize=True)
-            metodos = {1: "Dinheiro", 2: "PIX", 3: "Debito", 4: "Credito"}
-            while True:
-                evento, valores = janela.read()
-                if evento == sg.WINDOW_CLOSED:
-                    janela.close()
-                    return "Dinheiro"
-                if evento in metodos:
-                    janela.close()
-                    return metodos[evento]
-        except Exception as e:
-            self.mostrar_popup("Erro", f"Erro ao selecionar método de pagamento: {e}")
-            return "Dinheiro"
+        return "Dinheiro"
 
     def mostra_venda_realizada(self, dados_venda: dict):
-        try:
-            if not dados_venda or not isinstance(dados_venda, dict):
-                raise RegraDeNegocioException("Dados da venda não disponíveis.")
-            layout = [
-                [
-                    sg.Text(
-                        "--- VENDA REALIZADA COM SUCESSO ---",
-                        font=("Helvetica", 14, "bold"),
-                    )
-                ],
-                [
-                    sg.Text(
-                        "ID da Venda:", size=(10, 1), font=("Helvetica", 10, "bold")
-                    ),
-                    sg.Text(str(dados_venda.get("id_venda", "N/A"))),
-                ],
-                [
-                    sg.Text("Cliente:", size=(10, 1), font=("Helvetica", 10, "bold")),
-                    sg.Text(str(dados_venda.get("cliente", "N/A"))),
-                ],
-                [
-                    sg.Text("Evento:", size=(10, 1), font=("Helvetica", 10, "bold")),
-                    sg.Text(str(dados_venda.get("evento", "N/A"))),
-                ],
-                [
-                    sg.Text("Método:", size=(10, 1), font=("Helvetica", 10, "bold")),
-                    sg.Text(str(dados_venda.get("metodo", "N/A"))),
-                ],
-                [
-                    sg.Text("TOTAL:", size=(10, 1), font=("Helvetica", 12, "bold")),
-                    sg.Text(
-                        f"R$ {float(dados_venda.get('total', 0)):.2f}",
-                        font=("Helvetica", 12, "bold"),
-                    ),
-                ],
-                [sg.Button("OK", key="-OK-")],
-            ]
-            janela = sg.Window("Venda Concluída", layout, modal=True, finalize=True)
-            while True:
-                evento, valores = janela.read()
-                if evento == sg.WINDOW_CLOSED or evento == "-OK-":
-                    break
-            janela.close()
-        except (ValueError, TypeError) as e:
-            self.mostrar_popup("Erro", f"Erro nos dados da venda: {e}")
-        except Exception as e:
-            self.mostrar_popup("Erro", f"Erro ao exibir venda realizada: {e}")
+        pass
 
     def mostra_relatorio_vendas(self, lista_vendas: List[dict]):
-        try:
-            if not lista_vendas or not isinstance(lista_vendas, list):
-                self.mostrar_popup("Relatório", "\nNenhuma venda registrada.")
-                return
-            total_geral = 0.0
-            dados_tabela = []
-            headings = ["ID Venda", "Cliente", "Evento", "Data", "Método", "Total (R$)"]
-            for venda in lista_vendas:
-                try:
-                    if not isinstance(venda, dict):
-                        raise RegraDeNegocioException("Dados de venda inválidos")
-                    total_venda = float(venda.get("total", 0))
-                    total_geral += total_venda
-                    dados_tabela.append(
-                        [
-                            str(venda.get("id_venda", "N/A")),
-                            str(venda.get("cliente", "N/A")),
-                            str(venda.get("evento", "N/A")),
-                            str(venda.get("data", "N/A")),
-                            str(venda.get("metodo", "N/A")),
-                            f"{total_venda:.2f}",
-                        ]
-                    )
-                except (ValueError, TypeError, KeyError) as e:
-                    dados_tabela.append(
-                        ["Erro", f"Erro: {e}", "N/A", "N/A", "N/A", "0.00"]
-                    )
-            layout = [
-                [
-                    sg.Text(
-                        "\n-------- RELATÓRIO DE VENDAS ----------",
-                        font=("Helvetica", 14, "bold"),
-                    )
-                ],
-                [
-                    sg.Table(
-                        values=dados_tabela,
-                        headings=headings,
-                        auto_size_columns=True,
-                        justification="left",
-                        num_rows=min(len(dados_tabela), 15),
-                        key="-TABLE-",
-                        expand_x=True,
-                        expand_y=True,
-                    )
-                ],
-                [
-                    sg.Text(
-                        f"\nTOTAL GERAL: R$ {total_geral:.2f}",
-                        font=("Helvetica", 12, "bold"),
-                    )
-                ],
-                [sg.Button("Fechar")],
-            ]
-            janela = sg.Window(
-                "Relatório de Vendas", layout, resizable=True, modal=True, finalize=True
-            )
-            janela.read()
-            janela.close()
-        except Exception as e:
-            self.mostrar_popup("Erro", f"Erro ao exibir relatório de vendas: {e}")
+        pass
 
     def confirma_continuar_comprando(self) -> bool:
-        try:
-            resposta = sg.popup_yes_no(
-                "Deseja adicionar mais produtos à venda?",
-                title="Continuar Comprando",
-                keep_on_top=True,
-            )
-            return resposta == "Yes"
-        except Exception as e:
-            self.mostrar_popup("Erro", f"Erro ao confirmar continuação: {e}")
-            return False
+        return False

@@ -2,15 +2,13 @@ from views.relatorio_view import RelatorioView
 from controllers.evento_controller import EventoController
 from controllers.usuario_controller import UsuarioController
 from controllers.produto_controller import ProdutoController
-from models.usuario import Usuario
-from models.evento import Evento
-from models.venda import Venda
-from models.ingresso import Ingresso
 from typing import List
 from collections import defaultdict
 import FreeSimpleGUI as sg
 from exceptions.entidadeNaoEncontradaException import EntidadeNaoEncontradaException
 from exceptions.regraDeNegocioException import RegraDeNegocioException
+from DAOs.ingresso_dao import IngressoDAO
+from DAOs.venda_dao import VendaDAO
 
 
 class RelatorioController:
@@ -111,8 +109,9 @@ class RelatorioController:
             eventos = self.__evento_controller.get_eventos_lista()
             if not eventos:
                 raise EntidadeNaoEncontradaException("Nenhum evento cadastrado.")
+            ingresso_dao = IngressoDAO()
             vendas_por_evento = {}
-            for ingresso in Ingresso.get_all():
+            for ingresso in ingresso_dao.get_all():
                 nome_evento = ingresso.evento.nome
                 if nome_evento not in vendas_por_evento:
                     vendas_por_evento[nome_evento] = {
@@ -122,67 +121,24 @@ class RelatorioController:
                     }
                 vendas_por_evento[nome_evento]["ingressos_vendidos"] += 1
                 vendas_por_evento[nome_evento]["faturamento"] += ingresso.preco
-            eventos_ordenados = []
+            ordenado = []
             for nome, dados in vendas_por_evento.items():
-                evento = dados["evento"]
-                eventos_ordenados.append(
+                ev = dados["evento"]
+                ordenado.append(
                     {
                         "nome": nome,
                         "ingressos_vendidos": dados["ingressos_vendidos"],
                         "faturamento": dados["faturamento"],
-                        "data": evento.data.strftime("%d/%m/%Y"),
-                        "local": evento.local,
+                        "data": ev.data.strftime("%d/%m/%Y"),
+                        "local": ev.local,
                     }
                 )
-            eventos_ordenados.sort(key=lambda e: e["ingressos_vendidos"], reverse=True)
-            self.__view.mostra_eventos_vendas(eventos_ordenados)
+            ordenado.sort(key=lambda e: e["ingressos_vendidos"], reverse=True)
+            self.__view.mostra_eventos_vendas(ordenado)
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostra_mensagem(str(e))
         except Exception as e:
-            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {str(e)}")
-
-    def relatorio_ranking_eventos(self):
-        try:
-            eventos = self.__evento_controller.get_eventos_lista()
-            if not eventos:
-                raise EntidadeNaoEncontradaException("Nenhum evento cadastrado.")
-            ranking = []
-            for evento in eventos:
-                nota_media = 0
-                if evento.feedbacks:
-                    nota_media = sum((f.nota for f in evento.feedbacks)) / len(
-                        evento.feedbacks
-                    )
-                ingressos_vendidos = len(
-                    [i for i in Ingresso.get_all() if i.evento == evento]
-                )
-                faturamento = sum(
-                    (i.preco for i in Ingresso.get_all() if i.evento == evento)
-                )
-                ranking.append(
-                    {
-                        "nome": evento.nome,
-                        "nota_media": nota_media,
-                        "ingressos_vendidos": ingressos_vendidos,
-                        "faturamento": faturamento,
-                        "data": evento.data.strftime("%d/%m/%Y"),
-                        "local": evento.local,
-                        "preco": evento.preco_entrada,
-                    }
-                )
-            ranking.sort(
-                key=lambda e: (
-                    e["nota_media"],
-                    e["ingressos_vendidos"],
-                    e["faturamento"],
-                ),
-                reverse=True,
-            )
-            self.__view.mostra_ranking_eventos(ranking)
-        except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
-            self.__view.mostra_mensagem(str(e))
-        except Exception as e:
-            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {str(e)}")
+            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {e}")
 
     def relatorio_produtos_preco(self):
         try:
@@ -213,23 +169,22 @@ class RelatorioController:
 
     def relatorio_produtos_vendidos(self):
         try:
+            venda_dao = VendaDAO()
             vendas_por_produto = defaultdict(
                 lambda: {"quantidade": 0, "faturamento": 0, "produto": None}
             )
-            for venda in Venda.get_all():
+            for venda in venda_dao.get_all():
                 for item in venda.itens:
-                    produto_nome = item.produto.nome
-                    vendas_por_produto[produto_nome]["quantidade"] += item.quantidade
-                    vendas_por_produto[produto_nome]["faturamento"] += item.subtotal
-                    vendas_por_produto[produto_nome]["produto"] = item.produto
+                    nome = item.produto.nome
+                    vendas_por_produto[nome]["quantidade"] += item.quantidade
+                    vendas_por_produto[nome]["faturamento"] += item.subtotal
+                    vendas_por_produto[nome]["produto"] = item.produto
             if not vendas_por_produto:
-                raise EntidadeNaoEncontradaException(
-                    "Nenhuma venda de produto encontrada."
-                )
-            produtos_ordenados = []
+                raise EntidadeNaoEncontradaException("Nenhuma venda de produto.")
+            ordenado = []
             for nome, dados in vendas_por_produto.items():
                 produto = dados["produto"]
-                produtos_ordenados.append(
+                ordenado.append(
                     {
                         "nome": nome,
                         "quantidade_vendida": dados["quantidade"],
@@ -237,32 +192,31 @@ class RelatorioController:
                         "estoque": produto.estoque if produto else 0,
                     }
                 )
-            produtos_ordenados.sort(key=lambda p: p["quantidade_vendida"], reverse=True)
-            self.__view.mostra_produtos_vendidos(produtos_ordenados)
+            ordenado.sort(key=lambda p: p["quantidade_vendida"], reverse=True)
+            self.__view.mostra_produtos_vendidos(ordenado)
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostra_mensagem(str(e))
         except Exception as e:
-            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {str(e)}")
+            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {e}")
 
     def relatorio_produtos_faturamento(self):
         try:
+            venda_dao = VendaDAO()
             vendas_por_produto = defaultdict(
                 lambda: {"quantidade": 0, "faturamento": 0, "produto": None}
             )
-            for venda in Venda.get_all():
+            for venda in venda_dao.get_all():
                 for item in venda.itens:
-                    produto_nome = item.produto.nome
-                    vendas_por_produto[produto_nome]["quantidade"] += item.quantidade
-                    vendas_por_produto[produto_nome]["faturamento"] += item.subtotal
-                    vendas_por_produto[produto_nome]["produto"] = item.produto
+                    nome = item.produto.nome
+                    vendas_por_produto[nome]["quantidade"] += item.quantidade
+                    vendas_por_produto[nome]["faturamento"] += item.subtotal
+                    vendas_por_produto[nome]["produto"] = item.produto
             if not vendas_por_produto:
-                raise EntidadeNaoEncontradaException(
-                    "Nenhuma venda de produto encontrada."
-                )
-            produtos_ordenados = []
+                raise EntidadeNaoEncontradaException("Nenhuma venda de produto.")
+            ordenado = []
             for nome, dados in vendas_por_produto.items():
                 produto = dados["produto"]
-                produtos_ordenados.append(
+                ordenado.append(
                     {
                         "nome": nome,
                         "quantidade_vendida": dados["quantidade"],
@@ -270,12 +224,12 @@ class RelatorioController:
                         "preco": produto.preco if produto else 0,
                     }
                 )
-            produtos_ordenados.sort(key=lambda p: p["faturamento"], reverse=True)
-            self.__view.mostra_produtos_faturamento(produtos_ordenados)
+            ordenado.sort(key=lambda p: p["faturamento"], reverse=True)
+            self.__view.mostra_produtos_faturamento(ordenado)
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostra_mensagem(str(e))
         except Exception as e:
-            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {str(e)}")
+            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {e}")
 
     def relatorio_estoque(self):
         try:
@@ -304,42 +258,46 @@ class RelatorioController:
 
     def relatorio_vendas_pagamento(self):
         try:
+            venda_dao = VendaDAO()
+            ingresso_dao = IngressoDAO()
             vendas_por_metodo = defaultdict(float)
-            for venda in Venda.get_all():
+            for venda in venda_dao.get_all():
                 vendas_por_metodo[venda.metodo_pagamento] += venda.total
-            for ingresso in Ingresso.get_all():
-                if ingresso.metodo_pagamento:
+            for ingresso in ingresso_dao.get_all():
+                if getattr(ingresso, "metodo_pagamento", None):
                     vendas_por_metodo[ingresso.metodo_pagamento] += ingresso.preco
             if not vendas_por_metodo:
-                raise EntidadeNaoEncontradaException("Nenhuma venda encontrada.")
-            vendas_ordenadas = dict(
+                raise EntidadeNaoEncontradaException("Nenhuma venda.")
+            ordenado = dict(
                 sorted(vendas_por_metodo.items(), key=lambda x: x[1], reverse=True)
             )
-            self.__view.mostra_vendas_pagamento(vendas_ordenadas)
+            self.__view.mostra_vendas_pagamento(ordenado)
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostra_mensagem(str(e))
         except Exception as e:
-            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {str(e)}")
+            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {e}")
 
     def relatorio_faturamento_evento(self):
         try:
-            faturamento_por_evento = defaultdict(
+            ingresso_dao = IngressoDAO()
+            venda_dao = VendaDAO()
+            fat_por_evento = defaultdict(
                 lambda: {"ingressos": 0, "produtos": 0, "evento": None}
             )
-            for ingresso in Ingresso.get_all():
-                nome_evento = ingresso.evento.nome
-                faturamento_por_evento[nome_evento]["ingressos"] += ingresso.preco
-                faturamento_por_evento[nome_evento]["evento"] = ingresso.evento
-            for venda in Venda.get_all():
-                nome_evento = venda.evento.nome
-                faturamento_por_evento[nome_evento]["produtos"] += venda.total
-                faturamento_por_evento[nome_evento]["evento"] = venda.evento
-            if not faturamento_por_evento:
-                raise EntidadeNaoEncontradaException("Nenhuma venda encontrada.")
-            eventos_ordenados = []
-            for nome, dados in faturamento_por_evento.items():
+            for ing in ingresso_dao.get_all():
+                nome = ing.evento.nome
+                fat_por_evento[nome]["ingressos"] += ing.preco
+                fat_por_evento[nome]["evento"] = ing.evento
+            for venda in venda_dao.get_all():
+                nome = venda.evento.nome
+                fat_por_evento[nome]["produtos"] += venda.total
+                fat_por_evento[nome]["evento"] = venda.evento
+            if not fat_por_evento:
+                raise EntidadeNaoEncontradaException("Sem vendas.")
+            ordenado = []
+            for nome, dados in fat_por_evento.items():
                 total = dados["ingressos"] + dados["produtos"]
-                eventos_ordenados.append(
+                ordenado.append(
                     {
                         "nome": nome,
                         "faturamento_ingressos": dados["ingressos"],
@@ -347,15 +305,17 @@ class RelatorioController:
                         "faturamento_total": total,
                     }
                 )
-            eventos_ordenados.sort(key=lambda e: e["faturamento_total"], reverse=True)
-            self.__view.mostra_faturamento_evento(eventos_ordenados)
+            ordenado.sort(key=lambda e: e["faturamento_total"], reverse=True)
+            self.__view.mostra_faturamento_evento(ordenado)
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostra_mensagem(str(e))
         except Exception as e:
-            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {str(e)}")
+            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {e}")
 
     def relatorio_top_clientes(self):
         try:
+            ingresso_dao = IngressoDAO()
+            venda_dao = VendaDAO()
             dados_clientes = defaultdict(
                 lambda: {
                     "total_gasto": 0,
@@ -364,82 +324,80 @@ class RelatorioController:
                     "usuario": None,
                 }
             )
-            for ingresso in Ingresso.get_all():
-                matricula = ingresso.comprador.matricula
-                dados_clientes[matricula]["total_gasto"] += ingresso.preco
-                dados_clientes[matricula]["ingressos_comprados"] += 1
-                dados_clientes[matricula]["usuario"] = ingresso.comprador
-            for venda in Venda.get_all():
-                matricula = venda.usuario.matricula
-                dados_clientes[matricula]["total_gasto"] += venda.total
-                dados_clientes[matricula]["produtos_comprados"] += sum(
-                    (item.quantidade for item in venda.itens)
+            for ingresso in ingresso_dao.get_all():
+                mat = ingresso.comprador.matricula
+                dados_clientes[mat]["total_gasto"] += ingresso.preco
+                dados_clientes[mat]["ingressos_comprados"] += 1
+                dados_clientes[mat]["usuario"] = ingresso.comprador
+            for venda in venda_dao.get_all():
+                mat = venda.usuario.matricula
+                dados_clientes[mat]["total_gasto"] += venda.total
+                dados_clientes[mat]["produtos_comprados"] += sum(
+                    item.quantidade for item in venda.itens
                 )
-                dados_clientes[matricula]["usuario"] = venda.usuario
+                dados_clientes[mat]["usuario"] = venda.usuario
             if not dados_clientes:
                 raise EntidadeNaoEncontradaException("Nenhuma compra encontrada.")
-            clientes_ordenados = []
-            for matricula, dados in dados_clientes.items():
-                usuario = dados["usuario"]
-                clientes_ordenados.append(
+            ordenado = []
+            for mat, dados in dados_clientes.items():
+                u = dados["usuario"]
+                ordenado.append(
                     {
-                        "nome": usuario.nome,
-                        "matricula": matricula,
+                        "nome": u.nome,
+                        "matricula": mat,
                         "total_gasto": dados["total_gasto"],
                         "ingressos_comprados": dados["ingressos_comprados"],
                         "produtos_comprados": dados["produtos_comprados"],
                     }
                 )
-            clientes_ordenados.sort(key=lambda c: c["total_gasto"], reverse=True)
-            clientes_ordenados = clientes_ordenados[:10]
-            self.__view.mostra_top_clientes(clientes_ordenados)
+            ordenado.sort(key=lambda c: c["total_gasto"], reverse=True)
+            self.__view.mostra_top_clientes(ordenado[:10])
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostra_mensagem(str(e))
         except Exception as e:
-            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {str(e)}")
+            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {e}")
 
     def relatorio_geral_sistema(self):
         try:
-            total_usuarios = len(Usuario.get_all())
+            ingresso_dao = IngressoDAO()
+            venda_dao = VendaDAO()
+            total_usuarios = len(self.__usuario_controller.listar_usuarios_objetos())
             total_eventos = len(self.__evento_controller.get_eventos_lista())
-            total_produtos = 0
             produtos_por_evento = (
                 self.__produto_controller.get_produtos_por_evento_lista()
             )
-            for produtos in produtos_por_evento.values():
-                total_produtos += len(produtos)
-            total_ingressos_vendidos = len(Ingresso.get_all())
+            total_produtos = sum(len(v) for v in produtos_por_evento.values())
+            ingressos = list(ingresso_dao.get_all())
+            vendas = list(venda_dao.get_all())
+            total_ingressos_vendidos = len(ingressos)
             total_produtos_vendidos = sum(
-                (
-                    sum((item.quantidade for item in venda.itens))
-                    for venda in Venda.get_all()
-                )
+                sum(item.quantidade for item in v.itens) for v in vendas
             )
-            faturamento_ingressos = sum((i.preco for i in Ingresso.get_all()))
-            faturamento_produtos = sum((v.total for v in Venda.get_all()))
+            faturamento_ingressos = sum(i.preco for i in ingressos)
+            faturamento_produtos = sum(v.total for v in vendas)
             faturamento_total = faturamento_ingressos + faturamento_produtos
-            evento_mais_popular = ""
-            produto_mais_vendido = ""
-            melhor_cliente = ""
             vendas_eventos = defaultdict(int)
-            for ingresso in Ingresso.get_all():
-                vendas_eventos[ingresso.evento.nome] += 1
-            if vendas_eventos:
-                evento_mais_popular = max(vendas_eventos, key=vendas_eventos.get)
+            for ing in ingressos:
+                vendas_eventos[ing.evento.nome] += 1
+            evento_mais_popular = (
+                max(vendas_eventos, key=vendas_eventos.get) if vendas_eventos else ""
+            )
             vendas_produtos = defaultdict(int)
-            for venda in Venda.get_all():
-                for item in venda.itens:
+            for v in vendas:
+                for item in v.itens:
                     vendas_produtos[item.produto.nome] += item.quantidade
-            if vendas_produtos:
-                produto_mais_vendido = max(vendas_produtos, key=vendas_produtos.get)
+            produto_mais_vendido = (
+                max(vendas_produtos, key=vendas_produtos.get) if vendas_produtos else ""
+            )
             gastos_clientes = defaultdict(float)
-            for ingresso in Ingresso.get_all():
-                gastos_clientes[ingresso.comprador.nome] += ingresso.preco
-            for venda in Venda.get_all():
-                gastos_clientes[venda.usuario.nome] += venda.total
-            if gastos_clientes:
-                melhor_cliente = max(gastos_clientes, key=gastos_clientes.get)
-            dados_relatorio = {
+            for ing in ingressos:
+                gastos_clientes[ing.comprador.nome] += ing.preco
+            for v in vendas:
+                gastos_clientes[v.usuario.nome] += v.total
+            melhor_cliente = (
+                max(gastos_clientes, key=gastos_clientes.get) if gastos_clientes else ""
+            )
+            dados = {
                 "total_usuarios": total_usuarios,
                 "total_eventos": total_eventos,
                 "total_produtos": total_produtos,
@@ -452,11 +410,11 @@ class RelatorioController:
                 "produto_mais_vendido": produto_mais_vendido,
                 "melhor_cliente": melhor_cliente,
             }
-            self.__view.mostra_relatorio_geral(dados_relatorio)
+            self.__view.mostra_relatorio_geral(dados)
         except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
             self.__view.mostra_mensagem(str(e))
         except Exception as e:
-            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {str(e)}")
+            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {e}")
 
     def rodar_menu_eventos(self):
         while True:
@@ -468,8 +426,6 @@ class RelatorioController:
                     self.relatorio_eventos_avaliacao()
                 elif opcao == 3:
                     self.relatorio_eventos_vendas()
-                elif opcao == 4:
-                    self.relatorio_ranking_eventos()
                 elif opcao == 0:
                     break
                 else:

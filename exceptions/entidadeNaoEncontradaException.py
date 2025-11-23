@@ -1,5 +1,9 @@
 class EntidadeNaoEncontradaException(Exception):
 
+    # mensagem: Mensagem de erro personalizada
+    # entidade: Tipo de entidade (opcional, para compatibilidade)
+    # identificador: Identificador da entidade (opcional, para compatibilidade)
+
     def __init__(self, mensagem: str, entidade: str = None, identificador: str = None):
         if entidade and identificador:
             mensagem_completa = f"ERRO: {entidade} com identificador '{identificador}' não foi encontrado."

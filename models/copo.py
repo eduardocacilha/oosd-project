@@ -24,9 +24,23 @@ class Copo(Produto):
     def capacidade_ml(self) -> int:
         return self.__capacidade_ml
 
+    @capacidade_ml.setter
+    def capacidade_ml(self, valor: int):
+        if not isinstance(valor, int) or valor <= 0:
+            raise RegraDeNegocioException(
+                "Capacidade deve ser um número inteiro positivo."
+            )
+        self.__capacidade_ml = valor
+
     @property
     def material(self) -> str:
         return self.__material
+
+    @material.setter
+    def material(self, valor: str):
+        if not isinstance(valor, str) or not valor.strip():
+            raise RegraDeNegocioException("Material do copo não pode estar vazio.")
+        self.__material = valor.strip()
 
     def __str__(self) -> str:
         return f"Copo {self.nome} - {self.__material} - {self.__capacidade_ml}ml - R$ {self.preco:.2f} - Estoque: {self.estoque}"

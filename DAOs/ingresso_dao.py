@@ -3,13 +3,12 @@ from models.ingresso import Ingresso
 
 
 class IngressoDAO(DAO):
-
     def __init__(self):
         super().__init__("ingressos.pkl")
 
     def add(self, ingresso: Ingresso):
         if (
-            ingresso is not None
+            ingresso
             and isinstance(ingresso, Ingresso)
             and isinstance(ingresso.id_ingresso, int)
         ):
@@ -17,7 +16,7 @@ class IngressoDAO(DAO):
 
     def update(self, ingresso: Ingresso):
         if (
-            ingresso is not None
+            ingresso
             and isinstance(ingresso, Ingresso)
             and isinstance(ingresso.id_ingresso, int)
         ):

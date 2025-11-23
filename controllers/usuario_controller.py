@@ -1,11 +1,9 @@
 from views.usuario_view import UsuarioView
 from models.usuario import Usuario
-from models.ingresso import Ingresso
-from models.venda import Venda
-from datetime import date
-from typing import List, TYPE_CHECKING, Optional
 from exceptions.entidadeNaoEncontradaException import EntidadeNaoEncontradaException
 from exceptions.regraDeNegocioException import RegraDeNegocioException
+from typing import Optional, List, TYPE_CHECKING
+from DAOs.usuario_dao import UsuarioDAO
 
 if TYPE_CHECKING:
     from controllers.evento_controller import EventoController
@@ -15,7 +13,10 @@ class UsuarioController:
 
     def __init__(self, usuario_view: UsuarioView):
         self.__view = usuario_view
-        self.__evento_controller: "EventoController" = None
+        from typing import Optional as _Optional
+
+        self.__evento_controller: _Optional["EventoController"] = None
+        self.__usuario_dao = UsuarioDAO()
 
     def set_evento_controller(self, evento_controller):
         self.__evento_controller = evento_controller
@@ -43,388 +44,287 @@ class UsuarioController:
     def incluir_usuario(self):
         try:
             dados_usuario = self.__view.pega_dados_usuario(pedindo_matricula=True)
-            if dados_usuario is None:
+            if not dados_usuario:
                 return
-            if Usuario.get_by_matricula(dados_usuario["matricula"]):
-                raise RegraDeNegocioException(
-                    f"Usuário com matrícula {dados_usuario['matricula']} já cadastrado!"
-                )
-            novo_usuario = Usuario(
+            if self.__usuario_dao.get(dados_usuario["matricula"]):
+                raise RegraDeNegocioException("Matrícula já cadastrada!")
+            usuario = Usuario(
                 dados_usuario["matricula"],
                 dados_usuario["nome"],
                 dados_usuario["email"],
             )
-            Usuario.add(novo_usuario)
-            self.__view.mostrar_popup(
-                "Sucesso", f"Usuário {novo_usuario.nome} incluído com sucesso!"
-            )
-        except RegraDeNegocioException as e:
-            self.__view.mostrar_popup("Erro de Negócio", str(e))
-        except ValueError as e:
-            self.__view.mostrar_popup("Erro de Validação", str(e))
+            self.__usuario_dao.add(usuario)
+            self.__view.mostrar_popup("Sucesso", "Usuário incluído com sucesso!")
+        except (RegraDeNegocioException, EntidadeNaoEncontradaException) as e:
+            self.__view.mostrar_popup("Erro", str(e))
         except Exception as e:
-            self.__view.mostrar_popup(
-                "Erro Inesperado", f"Erro ao incluir usuário: {str(e)}"
-            )
+            self.__view.mostrar_popup("Erro", f"Erro ao incluir usuário: {e}")
 
     def alterar_usuario(self):
         try:
             matricula = self.__view.pega_matricula_usuario()
-            if matricula is None:
+            if not matricula:
                 return
-            usuario = Usuario.get_by_matricula(matricula)
+            usuario = self.__usuario_dao.get(matricula)
             if not usuario:
-                raise EntidadeNaoEncontradaException(
-                    f"Usuário com matrícula {matricula} não encontrado!"
-                )
-            dados_usuario = self.__view.pega_dados_usuario(pedindo_matricula=False)
-            if dados_usuario is None:
+                raise EntidadeNaoEncontradaException("Usuário não encontrado.")
+            novos = self.__view.pega_dados_usuario(pedindo_matricula=False)
+            if not novos:
                 return
-            usuario.nome = dados_usuario["nome"]
-            usuario.email = dados_usuario["email"]
-            self.__view.mostrar_popup(
-                "Sucesso", f"Usuário {usuario.nome} alterado com sucesso!"
-            )
-        except EntidadeNaoEncontradaException as e:
-            self.__view.mostrar_popup("Entidade Não Encontrada", str(e))
-        except RegraDeNegocioException as e:
-            self.__view.mostrar_popup("Erro de Negócio", str(e))
-        except ValueError as e:
-            self.__view.mostrar_popup("Erro de Validação", str(e))
+            usuario.nome = novos["nome"]
+            usuario.email = novos["email"]
+            self.__usuario_dao.update(usuario)
+            self.__view.mostrar_popup("Sucesso", "Usuário alterado com sucesso!")
+        except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
+            self.__view.mostrar_popup("Erro", str(e))
         except Exception as e:
-            self.__view.mostrar_popup(
-                "Erro Inesperado", f"Erro ao alterar usuário: {str(e)}"
-            )
+            self.__view.mostrar_popup("Erro", f"Erro ao alterar usuário: {e}")
 
     def listar_usuarios(self):
-        try:
-            usuarios = Usuario.get_all()
-            if not usuarios:
-                self.__view.mostrar_popup("ℹ Informação", "Nenhum usuário cadastrado.")
-                return
-            dados_usuarios = []
-            for usuario in usuarios:
-                dados_usuarios.append(
-                    {
-                        "matricula": usuario.matricula,
-                        "nome": usuario.nome,
-                        "email": usuario.email,
-                    }
-                )
-            self.__view.mostra_usuarios(dados_usuarios)
-        except Exception as e:
-            self.__view.mostrar_popup("Erro", f"Erro ao listar usuários: {str(e)}")
+        usuarios = list(self.__usuario_dao.get_all())
+        if not usuarios:
+            self.__view.mostrar_popup("Info", "Nenhum usuário cadastrado.")
+            return
+        dados = [
+            {"matricula": u.matricula, "nome": u.nome, "email": u.email}
+            for u in usuarios
+        ]
+        self.__view.mostra_usuarios(dados)
 
     def excluir_usuario(self):
         try:
             matricula = self.__view.pega_matricula_usuario()
-            if matricula is None:
+            if not matricula:
                 return
-            usuario = Usuario.get_by_matricula(matricula)
+            usuario = self.__usuario_dao.get(matricula)
             if not usuario:
-                raise EntidadeNaoEncontradaException(
-                    f"Usuário com matrícula {matricula} não encontrado!"
-                )
-            if len(usuario.ingressos_comprados) > 0:
-                raise RegraDeNegocioException(
-                    "Usuário com ingressos não pode ser excluído!"
-                )
-            Usuario.remove(usuario)
-            self.__view.mostrar_popup(
-                "Sucesso", f"Usuário {usuario.nome} excluído com sucesso!"
-            )
-        except EntidadeNaoEncontradaException as e:
-            self.__view.mostrar_popup("Entidade Não Encontrada", str(e))
-        except RegraDeNegocioException as e:
-            self.__view.mostrar_popup("Erro de Negócio", str(e))
+                raise EntidadeNaoEncontradaException("Usuário não encontrado.")
+            if getattr(usuario, "ingressos_comprados", []):
+                raise RegraDeNegocioException("Usuário possui ingressos.")
+            self.__usuario_dao.remove(matricula)
+            self.__view.mostrar_popup("Sucesso", "Usuário excluído.")
+        except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
+            self.__view.mostrar_popup("Erro", str(e))
         except Exception as e:
-            self.__view.mostrar_popup(
-                "Erro Inesperado", f"Erro ao excluir usuário: {str(e)}"
-            )
+            self.__view.mostrar_popup("Erro", f"Erro ao excluir usuário: {e}")
 
     def ver_historico_compras(self):
-        try:
-            matricula = self.__view.pega_matricula_usuario()
-            if matricula is None:
-                return
-            usuario = Usuario.get_by_matricula(matricula)
-            if not usuario:
-                raise EntidadeNaoEncontradaException(
-                    f"Usuário com matrícula {matricula} não encontrado!"
-                )
-            historico = usuario.historico_compras
-            if not historico:
-                self.__view.mostrar_popup("ℹ Informação", "Nenhuma compra realizada.")
-                return
-            dados_historico = []
-            for i, venda in enumerate(historico, 1):
-                dados_historico.append(
+        matricula = self.__view.pega_matricula_usuario()
+        if not matricula:
+            return
+        usuario = self.__usuario_dao.get(matricula)
+        if not usuario:
+            self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
+            return
+        historico = getattr(usuario, "historico_compras", [])
+        if not historico:
+            self.__view.mostrar_popup("Info", "Nenhuma compra realizada.")
+            return
+        dados = []
+        for h in historico:
+            if isinstance(h, dict):
+                dados.append(
                     {
-                        "tipo": "Ingresso",
-                        "descricao": str(venda),
-                        "valor": getattr(venda, "preco", 0.0),
-                        "data": str(getattr(venda, "data_compra", "N/A")),
-                        "metodo": getattr(venda, "metodo_pagamento", "Não informado"),
+                        "tipo": h.get("tipo", "Dado"),
+                        "descricao": f"Ingresso revendido - Preço R$ {h.get('preco', 0):.2f}",
+                        "valor": h.get("preco", 0.0),
+                        "data": str(getattr(h.get("ingresso"), "data_compra", "N/A")),
+                        "metodo": getattr(h.get("ingresso"), "metodo_pagamento", "N/A"),
                     }
                 )
-            self.__view.mostra_historico_compras(dados_historico)
-        except EntidadeNaoEncontradaException as e:
-            self.__view.mostrar_popup("Entidade Não Encontrada", str(e))
-        except Exception as e:
-            self.__view.mostrar_popup(
-                "Erro", f"Erro ao visualizar histórico: {str(e)}"
-            )
+            else:
+                dados.append(
+                    {
+                        "tipo": getattr(h, "__class__", type("X", (), {})).__name__,
+                        "descricao": str(h),
+                        "valor": getattr(h, "preco", getattr(h, "total", 0.0)),
+                        "data": str(
+                            getattr(h, "data_compra", getattr(h, "data_hora", "N/A"))
+                        ),
+                        "metodo": getattr(h, "metodo_pagamento", "N/A"),
+                    }
+                )
+        self.__view.mostra_historico_compras(dados)
 
     def listar_ingressos_usuario(self):
-        try:
-            matricula = self.__view.pega_matricula_usuario()
-            if matricula is None:
+        matricula = self.__view.pega_matricula_usuario()
+        if not matricula:
+            return
+        usuario = self.__usuario_dao.get(matricula)
+        if not usuario:
+            self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
+            return
+        ingressos = list(getattr(usuario, "ingressos_comprados", []))
+        if not ingressos:
+            try:
+                from DAOs.ingresso_dao import IngressoDAO
+
+                ingresso_dao = IngressoDAO()
+                for ing in ingresso_dao.get_all():
+                    if getattr(ing, "comprador", None) == usuario:
+                        ingressos.append(ing)
+                if not ingressos:
+                    self.__view.mostrar_popup("Info", "Nenhum ingresso cadastrado.")
+                    return
+            except Exception as e:
+                self.__view.mostrar_popup("Erro", f"Falha ao recuperar ingressos: {e}")
                 return
-            usuario = Usuario.get_by_matricula(matricula)
-            if not usuario:
-                raise EntidadeNaoEncontradaException(
-                    f"Usuário com matrícula {matricula} não encontrado!"
-                )
-            ingressos = usuario.ingressos_comprados
-            if not ingressos:
-                self.__view.mostrar_popup("ℹ Informação", "Nenhum ingresso cadastrado.")
-                return
-            dados_ingressos = []
-            for ingresso in ingressos:
-                evento = getattr(ingresso, "evento", None)
-                evento_nome = (
-                    getattr(evento, "nome", "Desconhecido")
-                    if evento
-                    else "Desconhecido"
-                )
-                evento_data = getattr(evento, "data", "N/A") if evento else "N/A"
-                evento_local = getattr(evento, "local", "N/A") if evento else "N/A"
-                dados_ingressos.append(
-                    {
-                        "evento_nome": evento_nome,
-                        "evento_data": evento_data,
-                        "evento_local": evento_local,
-                        "preco": getattr(ingresso, "preco", 0.0),
-                        "data_compra": str(getattr(ingresso, "data_compra", "N/A")),
-                    }
-                )
-            self.__view.mostra_ingressos_usuario(dados_ingressos)
-        except EntidadeNaoEncontradaException as e:
-            self.__view.mostrar_popup("Entidade Não Encontrada", str(e))
-        except Exception as e:
-            self.__view.mostrar_popup("Erro", f"Erro ao listar ingressos: {str(e)}")
+        dados = []
+        for ing in ingressos:
+            ev = getattr(ing, "evento", None)
+            dados.append(
+                {
+                    "evento_nome": getattr(ev, "nome", "N/A"),
+                    "evento_data": getattr(ev, "data", "N/A"),
+                    "evento_local": getattr(ev, "local", "N/A"),
+                    "preco": getattr(ing, "preco", 0.0),
+                    "data_compra": str(getattr(ing, "data_compra", "N/A")),
+                }
+            )
+        self.__view.mostra_ingressos_usuario(dados)
 
     def avaliar_evento(self):
-        try:
-            if self.__evento_controller is None:
-                self.__view.mostrar_popup(
-                    "Erro Interno", "Controlador de Eventos não foi inicializado."
-                )
-                return
-            if not Usuario.get_all():
-                self.__view.mostrar_popup(
-                    "Aviso", "Não há usuários cadastrados no sistema."
-                )
-                return
-            if not self.__evento_controller.get_eventos_lista():
-                self.__view.mostrar_popup(
-                    "Aviso", "Não há eventos cadastrados para avaliar."
-                )
-                return
-            matricula = self.__view.pega_matricula_usuario()
-            if not matricula:
-                return
-            usuario = Usuario.get_by_matricula(matricula)
-            if not usuario:
-                self.__view.mostrar_popup(
-                    "Erro", "Usuário não encontrado com essa matrícula."
-                )
-                return
-            self.__view.mostrar_popup(
-                "Avaliação", "Selecione o evento que deseja avaliar."
-            )
-            evento_escolhido = self.__evento_controller.selecionar_evento_gui()
-            if not evento_escolhido:
-                return
-            dados_avaliacao = self.__view.pega_dados_avaliacao()
-            if dados_avaliacao is None:
-                return
-            from models.feedback import Feedback
-            from datetime import date
+        if not self.__evento_controller:
+            self.__view.mostrar_popup("Erro", "Controlador de eventos indisponível.")
+            return
+        usuarios = list(self.__usuario_dao.get_all())
+        if not usuarios:
+            self.__view.mostrar_popup("Aviso", "Sem usuários cadastrados.")
+            return
+        if not self.__evento_controller.get_eventos_lista():
+            self.__view.mostrar_popup("Aviso", "Sem eventos cadastrados.")
+            return
+        matricula = self.__view.pega_matricula_usuario()
+        if not matricula:
+            return
+        usuario = self.__usuario_dao.get(matricula)
+        if not usuario:
+            self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
+            return
+        evento = self.__evento_controller.selecionar_evento_gui()
+        if not evento:
+            return
+        dados = self.__view.pega_dados_avaliacao()
+        if not dados:
+            return
+        from models.feedback import Feedback
+        from datetime import date as _date
 
+        try:
             feedback = Feedback(
                 usuario=usuario,
-                evento=evento_escolhido,
-                nota=dados_avaliacao["nota"],
-                comentario=dados_avaliacao["comentario"],
-                data=date.today(),
+                evento=evento,
+                nota=dados["nota"],
+                comentario=dados["comentario"],
+                data=_date.today(),
             )
-            evento_escolhido.adicionar_feedback(feedback)
-            self.__view.mostrar_popup(
-                "Sucesso",
-                f"Avaliação registrada com sucesso para o evento '{evento_escolhido.nome}'!",
-            )
-        except EntidadeNaoEncontradaException as e:
+            evento.adicionar_feedback(feedback)
+            from DAOs.feedback_dao import FeedbackDAO
+
+            FeedbackDAO().add(feedback)
+            if hasattr(self.__evento_controller, "persistir_evento"):
+                self.__evento_controller.persistir_evento(evento)
+            self.__view.mostrar_popup("Sucesso", "Feedback registrado.")
+        except (RegraDeNegocioException, EntidadeNaoEncontradaException) as e:
             self.__view.mostrar_popup("Erro", str(e))
-        except RegraDeNegocioException as e:
-            self.__view.mostrar_popup("Aviso", str(e))
         except Exception as e:
-            self.__view.mostrar_popup("Erro", f"Erro ao avaliar evento: {str(e)}")
+            self.__view.mostrar_popup("Erro", f"Falha ao registrar feedback: {e}")
 
     def buscar_usuario_por_matricula(self, matricula: str) -> Optional[Usuario]:
-        try:
-            if not matricula:
-                return None
-            return Usuario.get_by_matricula(matricula)
-        except Exception as e:
-            print(f"Erro na busca por matrícula: {e}")
+        if not matricula:
             return None
+        return self.__usuario_dao.get(matricula)
 
     def pega_matricula_usuario_gui(self) -> Optional[str]:
-        try:
-            return self.__view.pega_matricula_usuario()
-        except Exception as e:
-            print(f"Erro ao coletar matrícula via GUI: {e}")
-            return None
+        return self.__view.pega_matricula_usuario()
 
     def listar_usuarios_objetos(self) -> List[Usuario]:
-        try:
-            return Usuario.get_all()
-        except Exception as e:
-            print(f"Erro ao listar usuários: {e}")
-            return []
+        return list(self.__usuario_dao.get_all())
 
     def criar_usuario_teste(self, dados: dict) -> Usuario:
-        try:
-            if Usuario.get_by_matricula(dados["matricula"]):
-                raise RegraDeNegocioException("Matrícula já cadastrada!")
-            usuario = Usuario(dados["matricula"], dados["nome"], dados["email"])
-            Usuario.add(usuario)
-            return usuario
-        except Exception as e:
-            raise RegraDeNegocioException(f"Erro ao criar usuário teste: {e}")
+        if self.__usuario_dao.get(dados["matricula"]):
+            raise RegraDeNegocioException("Matrícula já cadastrada!")
+        usuario = Usuario(dados["matricula"], dados["nome"], dados["email"])
+        self.__usuario_dao.add(usuario)
+        return usuario
 
     def get_usuario_por_matricula(self, matricula: str) -> Optional[Usuario]:
-        return self.buscar_usuario_por_matricula(matricula)
+        return self.__usuario_dao.get(matricula)
 
     def validar_usuario_existe(self, matricula: str) -> bool:
-        try:
-            usuario = Usuario.get_by_matricula(matricula)
-            return usuario is not None
-        except Exception:
-            return False
+        return self.__usuario_dao.get(matricula) is not None
 
     def obter_todos_usuarios(self) -> List[Usuario]:
-        return self.listar_usuarios_objetos()
+        return list(self.__usuario_dao.get_all())
 
     def selecionar_usuario_gui(self) -> Optional[Usuario]:
-        try:
-            usuarios = Usuario.get_all()
-            if not usuarios:
-                self.__view.mostrar_popup("ℹ Informação", "Nenhum usuário cadastrado.")
-                return None
-            dados_usuarios = []
-            for usuario in usuarios:
-                dados_usuarios.append(
-                    {
-                        "matricula": usuario.matricula,
-                        "nome": usuario.nome,
-                        "email": usuario.email,
-                    }
-                )
-            matricula = self.__view.seleciona_usuario_lista(dados_usuarios)
-            if matricula:
-                return Usuario.get_by_matricula(matricula)
+        matricula = self.__view.pega_matricula_usuario()
+        if not matricula:
             return None
-        except Exception as e:
-            self.__view.mostrar_popup("Erro", f"Erro ao selecionar usuário: {e}")
+        usuario = self.__usuario_dao.get(matricula)
+        if not usuario:
+            self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
             return None
+        return usuario
 
     def obter_dados_para_relatorio(self) -> List[dict]:
-        try:
-            usuarios = Usuario.get_all()
-            dados_relatorio = []
-            for usuario in usuarios:
-                try:
-                    total_ingressos = len(usuario.ingressos_comprados)
-                    total_gasto = sum(
-                        (
-                            ing.preco
-                            for ing in usuario.ingressos_comprados
-                            if hasattr(ing, "preco")
-                        )
-                    )
-                    dados_relatorio.append(
-                        {
-                            "nome": usuario.nome,
-                            "matricula": usuario.matricula,
-                            "email": usuario.email,
-                            "total_ingressos": total_ingressos,
-                            "total_gasto": total_gasto,
-                            "produtos_comprados": 0,
-                        }
-                    )
-                except Exception as e:
-                    print(f"Erro ao processar dados do usuário {usuario.nome}: {e}")
-                    continue
-            return dados_relatorio
-        except Exception as e:
-            print(f"Erro ao obter dados para relatório: {e}")
-            return []
+        usuarios = list(self.__usuario_dao.get_all())
+        dados = []
+        for u in usuarios:
+            total_ingressos = len(getattr(u, "ingressos_comprados", []))
+            total_gasto = 0
+            for ing in getattr(u, "ingressos_comprados", []):
+                total_gasto += getattr(ing, "preco", 0)
+            dados.append(
+                {
+                    "nome": u.nome,
+                    "matricula": u.matricula,
+                    "email": u.email,
+                    "total_ingressos": total_ingressos,
+                    "total_gasto": total_gasto,
+                    "produtos_comprados": 0,
+                }
+            )
+        return dados
 
     def pega_matricula_usuario(self) -> Optional[str]:
-        try:
-            return self.__view.pega_matricula_usuario()
-        except Exception as e:
-            print(f"Erro ao pegar matrícula do usuário: {e}")
-            return None
+        return self.__view.pega_matricula_usuario()
 
     def selecionar_usuario_para_revenda(self) -> Optional[Usuario]:
-        try:
-            matricula = self.pega_matricula_usuario_gui()
-            if not matricula:
-                return None
-            usuario = Usuario.get_by_matricula(matricula)
-            if not usuario:
-                self.__view.mostrar_popup(
-                    "Erro", f"Usuário com matrícula {matricula} não encontrado!"
-                )
-                return None
-            return usuario
-        except Exception as e:
-            self.__view.mostrar_popup("Erro", f"Erro ao selecionar usuário: {e}")
+        matricula = self.pega_matricula_usuario_gui()
+        if not matricula:
             return None
+        usuario = self.__usuario_dao.get(matricula)
+        if not usuario:
+            self.__view.mostrar_popup("Erro", "Usuário não encontrado.")
+            return None
+        return usuario
 
     def obter_ingressos_usuario_para_revenda(self, matricula: str) -> List[dict]:
-        try:
-            usuario = Usuario.get_by_matricula(matricula)
-            if not usuario:
-                return []
-            dados_ingressos = []
-            for ingresso in usuario.ingressos_comprados:
-                if not hasattr(ingresso, "em_revenda") or not ingresso.em_revenda:
-                    evento = getattr(ingresso, "evento", None)
-                    evento_nome = (
-                        getattr(evento, "nome", "Desconhecido")
-                        if evento
-                        else "Desconhecido"
-                    )
-                    dados_ingressos.append(
-                        {
-                            "nome_evento": evento_nome,
-                            "preco": getattr(ingresso, "preco", 0.0),
-                            "data_compra": str(getattr(ingresso, "data_compra", "N/A")),
-                            "ingresso_obj": ingresso,
-                        }
-                    )
-            return dados_ingressos
-        except Exception as e:
-            print(f"Erro ao obter ingressos para revenda: {e}")
+        usuario = self.__usuario_dao.get(matricula)
+        if not usuario:
             return []
+        dados = []
+        for ingresso in getattr(usuario, "ingressos_comprados", []):
+            if not getattr(ingresso, "em_revenda", False):
+                ev = getattr(ingresso, "evento", None)
+                dados.append(
+                    {
+                        "nome_evento": getattr(ev, "nome", "N/A"),
+                        "preco": getattr(ingresso, "preco", 0.0),
+                        "data_compra": str(getattr(ingresso, "data_compra", "N/A")),
+                        "ingresso_obj": ingresso,
+                    }
+                )
+        return dados
 
     def mostrar_popup(self, titulo: str, mensagem: str):
+        self.__view.mostrar_popup(titulo, mensagem)
+
+    def recarregar_usuarios(self):
         try:
-            self.__view.mostrar_popup(titulo, mensagem)
+            from DAOs.usuario_dao import UsuarioDAO
+
+            self.__usuario_dao = UsuarioDAO()
         except Exception as e:
-            print(f"Erro ao mostrar popup: {e}")
-            print(f"Título: {titulo}, Mensagem: {mensagem}")
+            self.__view.mostrar_popup("Aviso", f"Falha ao recarregar usuários: {e}")
