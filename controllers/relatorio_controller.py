@@ -500,9 +500,6 @@ class RelatorioController:
                     self.relatorio_produtos_faturamento()
                 elif opcao == 4:
                     self.relatorio_estoque()
-                elif opcao == 5:
-
-                    self.__view.mostra_mensagem("Função ainda não implementada.")
                 elif opcao == 0:
                     break
                 else:
@@ -522,9 +519,6 @@ class RelatorioController:
                     self.relatorio_vendas_pagamento()
                 elif opcao == 2:
                     self.relatorio_faturamento_evento()
-                elif opcao == 3:
-
-                    self.__view.mostra_mensagem("Função ainda não implementada.")
                 elif opcao == 4:
                     self.relatorio_top_clientes()
                 elif opcao == 0:
@@ -544,10 +538,6 @@ class RelatorioController:
 
                 if opcao == 1:
                     self.relatorio_top_clientes()
-                elif opcao == 2:
-                     self.__view.mostra_mensagem("Função 'Usuários Mais Ativos' ainda não implementada.")
-                elif opcao == 3:
-                     self.__view.mostra_mensagem("Função 'Usuários por Ingressos' ainda não implementada.")
                 elif opcao == 0:
                     break
                 else:

@@ -73,7 +73,6 @@ class RelatorioView:
                 [sg.Button("Produtos Mais Vendidos", key=2, size=(30,1))],
                 [sg.Button("Produtos com Maior Faturamento", key=3, size=(30,1))],
                 [sg.Button("Relatorio de Estoque", key=4, size=(30,1))],
-                [sg.Button("Ranking Completo de Produtos", key=5, size=(30,1))],
                 [sg.Button("Voltar", key=0, size=(30,1), button_color=('white', 'red'))]
             ]
 
@@ -98,7 +97,6 @@ class RelatorioView:
                 [sg.Text("\n-------- RELATORIOS DE VENDAS ----------", font=("Helvetica", 14, "bold"))],
                 [sg.Button("Vendas por Metodo de Pagamento", key=1, size=(30,1))],
                 [sg.Button("Faturamento por Evento", key=2, size=(30,1))],
-                [sg.Button("Vendas por Periodo", key=3, size=(30,1))],
                 [sg.Button("Top Clientes", key=4, size=(30,1))],
                 [sg.Button("Voltar", key=0, size=(30,1), button_color=('white', 'red'))]
             ]
@@ -123,8 +121,6 @@ class RelatorioView:
             layout = [
                 [sg.Text("\n-------- RELATORIOS DE USUARIOS ----------", font=("Helvetica", 14, "bold"))],
                 [sg.Button("Usuarios que Mais Gastaram", key=1, size=(30,1))],
-                [sg.Button("Usuarios Mais Ativos", key=2, size=(30,1))],
-                [sg.Button("Usuarios por Quantidade de Ingressos", key=3, size=(30,1))],
                 [sg.Button("Voltar", key=0, size=(30,1), button_color=('white', 'red'))]
             ]
 

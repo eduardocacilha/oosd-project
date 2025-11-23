@@ -11,6 +11,8 @@ from controllers.produto_controller import ProdutoController
 from controllers.relatorio_controller import RelatorioController
 from exceptions.entidadeNaoEncontradaException import EntidadeNaoEncontradaException
 from exceptions.regraDeNegocioException import RegraDeNegocioException
+from exceptions.entidadeNaoEncontradaException import EntidadeNaoEncontradaException
+from exceptions.regraDeNegocioException import RegraDeNegocioException
 import FreeSimpleGUI as sg
 
 class MainController:
@@ -251,33 +253,13 @@ class MainController:
 
     def rodar_submenu_ingresso(self):
         try:
-            while True:
-                try:
-                    print("\n-------- MENU INGRESSOS ----------")
-                    print("1 - Comprar Ingresso")
-                    print("2 - Gerenciar Revenda")
-                    print("0 - Retornar")
+            
+            self.__ingresso_controller.rodar_menu_ingresso()
 
-                    try:
-                        opcao = int(input("Escolha a opção: "))
-                    except ValueError:
-                        print("Entrada inválida. Digite um número.")
-                        continue
-
-                    if opcao == 1:
-                        self.__ingresso_controller.comprar_ingresso_de_evento()
-                    elif opcao == 2:
-                        self.rodar_submenu_revenda_ingresso()
-                    elif opcao == 0:
-                        break
-                    else:
-                        print("Opção inválida.")
-
-                except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
-                    print(f"Erro: {e}")
-                except Exception as e:
-                    print(f"Erro no submenu de ingressos: {e}")
-
+        except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
+            print(f"Erro: {e}")
+        except Exception as e:
+            print(f"Erro no submenu de ingressos: {e}")
         except Exception as e:
             print(f"Erro crítico no menu de ingressos: {e}")
 

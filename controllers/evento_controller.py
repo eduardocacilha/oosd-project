@@ -286,67 +286,24 @@ class EventoController:
         except Exception as e:
             self.__view.mostrar_popup("Erro Inesperado", f"Erro ao alterar evento: {e}")
 
-    def avaliar_evento(self):
-        try:
-            if not self.__usuario_controller:
-                raise RegraDeNegocioException("Controlador de Usuário não inicializado.")
+    def selecionar_evento_para_avaliacao(self) -> Evento:
+        """
+        Método auxiliar chamado pelo UsuarioController.
+        Apenas seleciona e retorna um evento para ser avaliado.
+        Lança exceções se não houver eventos.
+        """
+        if not self.__eventos:
+            raise EntidadeNaoEncontradaException("Evento", "Nenhum cadastrado")
 
+        # Prepara os dados para a View mostrar
+        dados_para_view = [self._transformar_evento_para_view(e) for e in self.__eventos]
+        
+        # Usa a View do Evento para mostrar a lista e pegar o índice
+        indice_escolhido = self.__view.seleciona_evento(dados_para_view)
+        
+        if indice_escolhido is None:
+            return None # Usuário cancelou a seleção
 
-            matricula = self.__usuario_controller.pega_matricula_usuario_gui()
-            if not matricula:
-                return
-
-            usuario = self.__usuario_controller.buscar_usuario_por_matricula(matricula)
-            if not usuario:
-                raise EntidadeNaoEncontradaException("Usuário não encontrado.")
-
-
-            if not self.__eventos:
-                raise EntidadeNaoEncontradaException("Nenhum evento cadastrado para avaliar.")
-
-            dados_para_view = [self._transformar_evento_para_view(e) for e in self.__eventos]
-            indice_escolhido = self.__view.seleciona_evento(dados_para_view)
-            if indice_escolhido is None:
-                return
-
-            evento_escolhido = self.__eventos[indice_escolhido]
-
-
-            if evento_escolhido.data > date.today():
-                raise RegraDeNegocioException("Só é possível avaliar eventos que já ocorreram.")
-
-
-            for feedback in evento_escolhido.feedbacks:
-                if feedback.usuario == usuario:
-                    raise RegraDeNegocioException("Usuário já avaliou este evento.")
-
-
-            dados_avaliacao = self.__usuario_controller.pega_dados_avaliacao_gui()
-            if dados_avaliacao is None:
-                return
-
-
-            if dados_avaliacao["nota"] < 1 or dados_avaliacao["nota"] > 5:
-                raise RegraDeNegocioException("Nota deve estar entre 1 e 5.")
-
-            if not dados_avaliacao["comentario"].strip():
-                raise RegraDeNegocioException("Comentário não pode estar vazio.")
-
-
-            feedback = Feedback(
-                usuario=usuario,
-                evento=evento_escolhido,
-                nota=dados_avaliacao["nota"],
-                comentario=dados_avaliacao["comentario"],
-                data=date.today()
-            )
-
-            evento_escolhido.adicionar_feedback(feedback)
-            self.__view.mostrar_popup("Sucesso", f"Avaliação registrada com sucesso para o evento '{evento_escolhido.nome}'!")
-
-        except EntidadeNaoEncontradaException as e:
-            self.__view.mostrar_popup("Erro", str(e))
-        except RegraDeNegocioException as e:
-            self.__view.mostrar_popup("Erro", str(e))
-        except Exception as e:
-            self.__view.mostrar_popup("Erro Inesperado", f"Erro ao avaliar evento: {e}")
+        evento_escolhido = self.__eventos[indice_escolhido]
+        
+        return evento_escolhido

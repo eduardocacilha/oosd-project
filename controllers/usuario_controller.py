@@ -14,6 +14,10 @@ class UsuarioController:
 
     def __init__(self, usuario_view: UsuarioView):
         self.__view = usuario_view
+        self.__evento_controller: 'EventoController' = None
+        
+    def set_evento_controller(self, evento_controller):
+        self.__evento_controller = evento_controller
 
     def rodar_menu_usuario(self):
         while True:
@@ -210,17 +214,77 @@ class UsuarioController:
             self.__view.mostrar_popup("✗ Erro", f"Erro ao listar ingressos: {str(e)}")
 
     def avaliar_evento(self):
+        """
+        Fluxo completo de avaliação, iniciado pelo Menu de Usuário.
+        Recria a lógica do T1 com as melhorias do T2.
+        """
         try:
-            dados_avaliacao = self.__view.pega_dados_avaliacao()
+            
+            # --- 1. VERIFICAÇÕES PRÉVIAS (Antes de pedir dados) ---
+            
+            # Verifica se o sistema está conectado corretamente
+            if self.__evento_controller is None:
+                 self.__view.mostrar_popup("Erro Interno", "Controlador de Eventos não foi inicializado.")
+                 return
 
-            if dados_avaliacao is None:
+            # Verifica se existem usuários no sistema
+            if not Usuario.get_all():
+                self.__view.mostrar_popup("Aviso", "Não há usuários cadastrados no sistema.")
                 return
 
-            self.__view.mostrar_popup("✓ Sucesso", "Avaliação registrada com sucesso!")
+            # Verifica se existem eventos no sistema
+            # (Usa o método helper do EventoController)
+            if not self.__evento_controller.get_eventos_lista():
+                self.__view.mostrar_popup("Aviso", "Não há eventos cadastrados para avaliar.")
+                return
+            
+            
+            # Obter o usuário
+            matricula = self.__view.pega_matricula_usuario()
+            if not matricula: return # Usuário cancelou/fechou a janela
+            
+            usuario = Usuario.get_by_matricula(matricula)
+            if not usuario:
+                self.__view.mostrar_popup("Erro", "Usuário não encontrado com essa matrícula.")
+                return
 
+            # Obter o evento (Selecionar na lista)
+            self.__view.mostrar_popup("Avaliação", "Selecione o evento que deseja avaliar.")
+            evento_escolhido = self.__evento_controller.selecionar_evento_gui()
+            
+            if not evento_escolhido:
+                return # Usuário cancelou a seleção de evento
+
+            # 3. Obter os dados da avaliação
+            dados_avaliacao = self.__view.pega_dados_avaliacao()
+            if dados_avaliacao is None: 
+                return # Usuário cancelou a avaliação
+
+            # 4. Chama o Model para criar o Feedback
+            from models.feedback import Feedback # Import local para garantir
+            from datetime import date
+            
+            feedback = Feedback(
+                usuario=usuario,
+                evento=evento_escolhido,
+                nota=dados_avaliacao["nota"],
+                comentario=dados_avaliacao["comentario"],
+                data=date.today()
+            )
+            
+            # 5. Adicionar o feedback ao evento
+            evento_escolhido.adicionar_feedback(feedback)
+            self.__view.mostrar_popup("Sucesso", f"Avaliação registrada com sucesso para o evento '{evento_escolhido.nome}'!")
+        
+        
+        except EntidadeNaoEncontradaException as e:
+            self.__view.mostrar_popup("Erro", str(e))
+        except RegraDeNegocioException as e:
+            self.__view.mostrar_popup("Aviso", str(e))    
         except Exception as e:
-            self.__view.mostrar_popup("✗ Erro", f"Erro ao registrar avaliação: {str(e)}")
+            self.__view.mostrar_popup("Erro", f"Erro ao avaliar evento: {str(e)}")
 
+        
     # Métodos auxiliares necessários para outros controladores
     def buscar_usuario_por_matricula(self, matricula: str) -> Optional[Usuario]:
         """Busca usuário por matrícula - usado por outros controladores"""
