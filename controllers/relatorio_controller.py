@@ -445,3 +445,50 @@ class RelatorioController:
                 self.__view.mostra_mensagem(str(e))
             except Exception as e:
                 self.__view.mostra_mensagem(f"Erro inesperado: {e}")
+                
+                
+    def relatorio_top_clientes(self):
+        
+        try:
+            dados_clientes = defaultdict(lambda: {
+                'total_gasto': 0,
+                'ingressos_comprados': 0,
+                'produtos_comprados': 0,
+                'usuario': None
+            })
+            
+            for ingresso in Ingresso.get_all():
+                matricula = ingresso.comprador.matricula
+                dados_clientes[matricula]['total_gasto'] += ingresso.preco
+                dados_clientes[matricula]['ingressos_comprados'] += 1
+                dados_clientes[matricula]['usuario'] = ingresso.comprador
+            
+            for venda in Venda.get_all():
+                matricula = venda.usuario.matricula
+                dados_clientes[matricula]['total_gasto'] += venda.total
+                dados_clientes[matricula]['produtos_comprados'] += sum(item.quantidade for item in venda.itens)
+                dados_clientes[matricula]['usuario'] = venda.usuario
+            
+            if not dados_clientes:
+                self.__view.mostra_mensagem("Nenhuma compra encontrada no sistema.")
+                return
+            
+            clientes_ordenados = []
+            for matricula, dados in dados_clientes.items():
+                usuario = dados['usuario']
+                clientes_ordenados.append({
+                    'nome': usuario.nome,
+                    'matricula': matricula,
+                    'total_gasto': dados['total_gasto'],
+                    'ingressos_comprados': dados['ingressos_comprados'],
+                    'produtos_comprados': dados['produtos_comprados']
+                })
+            
+            clientes_ordenados.sort(key=lambda c: c['total_gasto'], reverse=True)
+            
+            clientes_ordenados = clientes_ordenados[:10]
+            
+            self.__view.mostra_top_clientes(clientes_ordenados)
+            
+        except Exception as e:
+            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {str(e)}")

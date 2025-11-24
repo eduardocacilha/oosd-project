@@ -13,8 +13,6 @@ from controllers.relatorio_controller import RelatorioController
 from controllers.venda_controller import VendaController
 from exceptions.entidadeNaoEncontradaException import EntidadeNaoEncontradaException
 from exceptions.regraDeNegocioException import RegraDeNegocioException
-from exceptions.entidadeNaoEncontradaException import EntidadeNaoEncontradaException
-from exceptions.regraDeNegocioException import RegraDeNegocioException
 import FreeSimpleGUI as sg
 
 
@@ -91,30 +89,30 @@ class MainController:
             while True:
                 try:
                     evento, valores = janela_principal.read()
-                    if evento == sg.WINDOW_CLOSED or evento == "0":
+                    if evento == sg.WINDOW_CLOSED or evento == 0:
                         self.__main_view.mostrar_mensagem_encerramento()
                         break
-                    elif evento == "1":
+                    elif evento == 1:
                         janela_principal.hide()
                         self.__usuario_controller.rodar_menu_usuario()
                         janela_principal.un_hide()
-                    elif evento == "2":
+                    elif evento == 2:
                         janela_principal.hide()
                         self.__evento_controller.rodar_menu_evento()
                         janela_principal.un_hide()
-                    elif evento == "3":
+                    elif evento == 3:
                         janela_principal.hide()
                         self.__ingresso_controller.rodar_menu_ingresso()
                         janela_principal.un_hide()
-                    elif evento == "4":
+                    elif evento == 4:
                         janela_principal.hide()
                         self.__produto_controller.rodar_menu_produto()
                         janela_principal.un_hide()
-                    elif evento == "5":
+                    elif evento == 5:
                         janela_principal.hide()
                         self.__relatorio_controller.rodar_menu_relatorios()
                         janela_principal.un_hide()
-                    elif evento == "6":
+                    elif evento == 6:
                         janela_principal.hide()
                         self.__venda_controller.rodar_menu_venda()
                         janela_principal.un_hide()
