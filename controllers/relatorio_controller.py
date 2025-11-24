@@ -448,7 +448,7 @@ class RelatorioController:
                 
                 
     def relatorio_top_clientes(self):
-        
+    
         try:
             dados_clientes = defaultdict(lambda: {
                 'total_gasto': 0,
@@ -457,13 +457,19 @@ class RelatorioController:
                 'usuario': None
             })
             
-            for ingresso in Ingresso.get_all():
+            ingresso_dao = IngressoDAO()
+            for ingresso in ingresso_dao.get_all():
+                if not getattr(ingresso, "comprador", None):
+                    continue
                 matricula = ingresso.comprador.matricula
                 dados_clientes[matricula]['total_gasto'] += ingresso.preco
                 dados_clientes[matricula]['ingressos_comprados'] += 1
                 dados_clientes[matricula]['usuario'] = ingresso.comprador
             
-            for venda in Venda.get_all():
+            venda_dao = VendaDAO()
+            for venda in venda_dao.get_all():
+                if not getattr(venda, "usuario", None):
+                    continue
                 matricula = venda.usuario.matricula
                 dados_clientes[matricula]['total_gasto'] += venda.total
                 dados_clientes[matricula]['produtos_comprados'] += sum(item.quantidade for item in venda.itens)
@@ -476,6 +482,8 @@ class RelatorioController:
             clientes_ordenados = []
             for matricula, dados in dados_clientes.items():
                 usuario = dados['usuario']
+                if not usuario:
+                    continue
                 clientes_ordenados.append({
                     'nome': usuario.nome,
                     'matricula': matricula,
@@ -485,10 +493,10 @@ class RelatorioController:
                 })
             
             clientes_ordenados.sort(key=lambda c: c['total_gasto'], reverse=True)
-            
             clientes_ordenados = clientes_ordenados[:10]
             
             self.__view.mostra_top_clientes(clientes_ordenados)
             
         except Exception as e:
             self.__view.mostra_mensagem(f"Erro ao gerar relatório: {str(e)}")
+            
