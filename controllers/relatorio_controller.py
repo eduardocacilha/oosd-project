@@ -312,50 +312,6 @@ class RelatorioController:
         except Exception as e:
             self.__view.mostra_mensagem(f"Erro ao gerar relatório: {e}")
 
-    def relatorio_top_clientes(self):
-        try:
-            ingresso_dao = IngressoDAO()
-            venda_dao = VendaDAO()
-            dados_clientes = defaultdict(
-                lambda: {
-                    "total_gasto": 0,
-                    "ingressos_comprados": 0,
-                    "produtos_comprados": 0,
-                    "usuario": None,
-                }
-            )
-            for ingresso in ingresso_dao.get_all():
-                mat = ingresso.comprador.matricula
-                dados_clientes[mat]["total_gasto"] += ingresso.preco
-                dados_clientes[mat]["ingressos_comprados"] += 1
-                dados_clientes[mat]["usuario"] = ingresso.comprador
-            for venda in venda_dao.get_all():
-                mat = venda.usuario.matricula
-                dados_clientes[mat]["total_gasto"] += venda.total
-                dados_clientes[mat]["produtos_comprados"] += sum(
-                    item.quantidade for item in venda.itens
-                )
-                dados_clientes[mat]["usuario"] = venda.usuario
-            if not dados_clientes:
-                raise EntidadeNaoEncontradaException("Nenhuma compra encontrada.")
-            ordenado = []
-            for mat, dados in dados_clientes.items():
-                u = dados["usuario"]
-                ordenado.append(
-                    {
-                        "nome": u.nome,
-                        "matricula": mat,
-                        "total_gasto": dados["total_gasto"],
-                        "ingressos_comprados": dados["ingressos_comprados"],
-                        "produtos_comprados": dados["produtos_comprados"],
-                    }
-                )
-            ordenado.sort(key=lambda c: c["total_gasto"], reverse=True)
-            self.__view.mostra_top_clientes(ordenado[:10])
-        except (EntidadeNaoEncontradaException, RegraDeNegocioException) as e:
-            self.__view.mostra_mensagem(str(e))
-        except Exception as e:
-            self.__view.mostra_mensagem(f"Erro ao gerar relatório: {e}")
 
     def relatorio_geral_sistema(self):
         try:

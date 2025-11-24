@@ -164,8 +164,8 @@ class TesteSistema:
         eventos_dados = [
             {
                 "nome": "Show de Rock",
-                "data": (hoje + timedelta(days=30)).date(),  # corrigido para date
-                "data_str": (hoje + timedelta(days=30)).strftime("%d/%m/%Y"),
+                "data": (hoje + timedelta(days=0)).date(),  # corrigido para date
+                "data_str": (hoje + timedelta(days=0)).strftime("%d/%m/%Y"),
                 "local": "Estádio Central",
                 "preco_entrada": 80.0,
             },
@@ -177,11 +177,11 @@ class TesteSistema:
                 "preco_entrada": 120.0,
             },
             {
-                "nome": "Feira de Tecnologia",
-                "data": (hoje + timedelta(days=60)).date(),
-                "data_str": (hoje + timedelta(days=60)).strftime("%d/%m/%Y"),
-                "local": "Centro de Convenções",
-                "preco_entrada": 50.0,
+                "nome": "Aniversário Thais Bardini Idalino",
+                "data": (hoje + timedelta(days=23)).date(),
+                "data_str": (hoje + timedelta(days=23)).strftime("%d/%m/%Y"),
+                "local": "UFSC/CTC/INE",
+                "preco_entrada": 10000000.0,
             },
         ]
         for i, dados in enumerate(eventos_dados, 1):

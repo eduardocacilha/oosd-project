@@ -122,7 +122,6 @@ class RelatorioView:
                 ],
                 [sg.Button("Vendas por Metodo de Pagamento", key=1, size=(30, 1))],
                 [sg.Button("Faturamento por Evento", key=2, size=(30, 1))],
-                [sg.Button("Top Clientes", key=4, size=(30, 1))],
                 [
                     sg.Button(
                         "Voltar", key=0, size=(30, 1), button_color=("white", "red")

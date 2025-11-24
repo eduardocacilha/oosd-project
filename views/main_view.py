@@ -31,8 +31,8 @@ class MainView:
             [sg.Button("Gerenciar Eventos", key="2", size=(30, 1))],
             [sg.Button("Gerenciar Ingressos", key="3", size=(30, 1))],
             [sg.Button("Gerenciar Produtos", key="4", size=(30, 1))],
-            [sg.Button("Relatórios", key="5", size=(30, 1))],
             [sg.Button("Gerenciar Vendas", key="6", size=(30, 1))],
+            [sg.Button("Relatórios", key="5", size=(30, 1))],
             [
                 sg.Button(
                     "Finalizar Sistema",
